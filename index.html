@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>Encounter Practice</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%2323293f' stroke='%23f2994a' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23f2994a'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <main id="lobby" class="lobby">
+      <div class="lobby-card">
+        <h1>Encounter practice</h1>
+        <p class="lede">Rehearse a fight's mechanics alone with bots, or with your group in a shared room.</p>
+
+        <label class="field">
+          <span>Your name</span>
+          <input id="name" maxlength="24" autocomplete="nickname" placeholder="e.g. Ping" />
+        </label>
+
+        <div class="choices">
+          <button id="solo" class="btn">Practice solo</button>
+          <button id="create" class="btn btn-primary">Create a room</button>
+        </div>
+
+        <form id="join-form" class="join">
+          <label class="field">
+            <span>Room code</span>
+            <input id="code" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCDE" />
+          </label>
+          <button class="btn" type="submit">Join room</button>
+        </form>
+
+        <p id="lobby-status" class="status" role="status" aria-live="polite"></p>
+        <p class="fine">Encounter: <span id="encounter-name"></span>. Matchmaking: <span id="transport-name"></span>.</p>
+      </div>
+    </main>
+
+    <div id="game" class="game" hidden>
+      <section class="stage">
+        <div id="castbar" class="castbar" hidden>
+          <div class="castbar-name"><span id="cast-name"></span><span id="cast-time"></span></div>
+          <div class="castbar-track"><div id="cast-fill" class="castbar-fill"></div></div>
+        </div>
+        <canvas id="arena" aria-label="Arena. Move with WASD or arrow keys, or hold the mouse or a finger where you want to go."></canvas>
+        <div id="toast" class="toast" role="status" aria-live="assertive"></div>
+        <p class="controls">Move: WASD / arrows, or hold the mouse. Stats: <kbd>`</kbd></p>
+      </section>
+
+      <aside class="rail">
+        <div id="room-box" class="room" hidden>
+          <span class="room-label">Room</span>
+          <button id="room-code" class="room-code" title="Copy invite link"></button>
+          <span id="room-hint" class="room-hint">Click the code to copy an invite link</span>
+        </div>
+
+        <section class="panel">
+          <h2>Party</h2>
+          <ol id="roster" class="roster"></ol>
+        </section>
+
+        <section id="bot-panel" class="panel">
+          <h2>Bots</h2>
+          <label class="row">
+            <span>Behaviour</span>
+            <select id="bot-difficulty">
+              <option value="realistic">Realistic reactions</option>
+              <option value="perfect">Perfect</option>
+            </select>
+          </label>
+          <label class="row">
+            <span>Mistakes <output id="mistake-out">0%</output></span>
+            <input id="bot-mistakes" type="range" min="0" max="50" step="5" value="0" />
+          </label>
+          <p id="bot-note" class="fine" hidden>Only the host can change bot settings.</p>
+        </section>
+
+        <section class="panel panel-grow">
+          <h2>Mechanics</h2>
+          <ol id="feed" class="feed"></ol>
+        </section>
+
+        <button id="leave" class="btn btn-quiet">Leave</button>
+      </aside>
+
+      <pre id="debug" class="debug" hidden></pre>
+    </div>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

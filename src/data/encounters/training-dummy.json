@@ -1,0 +1,16 @@
+{
+  "id": "training-dummy",
+  "name": "Training Dummy (test encounter)",
+  "arenaRadius": 20,
+  "bossRadius": 3,
+  "loopLength": 58,
+  "timeline": [
+    { "at": 3,  "cast": 4, "key": "out",    "mechanic": { "type": "circle", "name": "Searing Ring",  "radius": 10, "at": { "kind": "boss" } } },
+    { "at": 10, "cast": 4, "key": "in",     "mechanic": { "type": "donut",  "name": "Hollow Core",   "inner": 6, "outer": 30, "at": { "kind": "boss" } } },
+    { "at": 17, "cast": 5, "key": "spread", "mechanic": { "type": "spread", "name": "Scatter",       "radius": 5 } },
+    { "at": 25, "cast": 5, "key": "stack",  "mechanic": { "type": "stack",  "name": "Converge",      "radius": 5, "minPlayers": 6, "on": { "kind": "randomPlayer" } } },
+    { "at": 33, "cast": 4,                  "mechanic": { "type": "line",   "name": "Piercing Beam", "width": 8, "length": 44, "toward": { "kind": "randomPlayer" } } },
+    { "at": 40, "cast": 4,                  "mechanic": { "type": "cone",   "name": "Frontal Sweep", "radius": 30, "angleDeg": 120, "facingDeg": "randomCardinal" } },
+    { "at": 47, "cast": 4,                  "mechanic": { "type": "circle", "name": "Meteor Rain",   "radius": 7, "count": 4, "spread": 10, "at": { "kind": "boss" } } }
+  ]
+}

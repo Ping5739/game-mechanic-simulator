@@ -1,0 +1,30 @@
+{
+  "name": "game-mechanic-simulator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browser-based encounter practice simulator with peer-to-peer multiplayer, bots and (later) log replay.",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ping5739/game-mechanic-simulator.git"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "peer-server": "node scripts/peer-server.mjs"
+  },
+  "dependencies": {
+    "peerjs": "^1.5.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "peer": "^1.0.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.1.0"
+  }
+}
