@@ -22,6 +22,19 @@ export interface FeedItem {
   at: number;
 }
 
+interface GhostSample {
+  tick: number;
+  x: number;
+  y: number;
+  dx: number;
+  dy: number;
+}
+
+export interface GhostView {
+  pos: Vec2;
+  dest: Vec2;
+}
+
 export interface TrackedHazard extends Hazard {
   result?: HitResult;
 }
@@ -45,6 +58,10 @@ export class ClientSession {
   readonly hazards = new Map<number, TrackedHazard>();
   readonly feed: FeedItem[] = [];
   pings: Record<string, number> = {};
+  /** Seek epoch; position reports carry it so the host can drop stale ones. */
+  epoch = 0;
+  loopStartTick = 0;
+  private ghostBuf: GhostSample[] = [];
 
   onReady: () => void = () => {};
   onFull: (reason: string) => void = () => {};
@@ -52,6 +69,7 @@ export class ClientSession {
   onRoster: () => void = () => {};
   onFeed: (item: FeedItem) => void = () => {};
   onBots: () => void = () => {};
+  onSeek: (loopSeconds: number) => void = () => {};
 
   private tickOffset: number | undefined;
   private shownTick = 0;
@@ -121,6 +139,8 @@ export class ClientSession {
         this.slot = m.slot;
         this.encounter = ENCOUNTERS[m.encounterId].def;
         this.bots = m.bots;
+        this.epoch = m.epoch;
+        this.loopStartTick = m.loopStartTick;
         for (const h of m.hazards) this.hazards.set(h.id, h);
         this.syncClock(m.tick);
         this.ready = true;
@@ -157,6 +177,11 @@ export class ClientSession {
           r.buf.push({ tick: m.tick, x, y });
           if (r.buf.length > 40) r.buf.shift();
         }
+        for (const [id, x, y, dx, dy] of m.g) {
+          if (id !== this.myId) continue;
+          this.ghostBuf.push({ tick: m.tick, x, y, dx, dy });
+          if (this.ghostBuf.length > 40) this.ghostBuf.shift();
+        }
         const present = new Set(m.p.map((p) => p[0]));
         for (const id of this.players.keys()) if (!present.has(id)) this.players.delete(id);
         break;
@@ -164,6 +189,22 @@ export class ClientSession {
       case "hazard":
         this.hazards.set(m.h.id, m.h);
         break;
+      case "seek": {
+        this.epoch = m.epoch;
+        this.loopStartTick = m.loopStartTick;
+        this.hazards.clear();
+        this.ghostBuf = [];
+        this.myHistory = [];
+        for (const r of this.players.values()) r.buf = [];
+        const mine = m.positions[this.myId];
+        if (mine) {
+          this.myPos = { x: mine[0], y: mine[1] };
+          this.ghostBuf.push({ tick: m.tick, x: mine[0], y: mine[1], dx: mine[0], dy: mine[1] });
+        }
+        this.lastSentTick = -1;
+        this.onSeek((m.tick - m.loopStartTick) * TICK_MS / 1000);
+        break;
+      }
       case "result": {
         const h = this.hazards.get(m.r.hazardId);
         if (h) h.result = m.r;
@@ -232,7 +273,7 @@ export class ClientSession {
       this.lastSentTick = tick;
       const x = r2(this.myPos.x);
       const y = r2(this.myPos.y);
-      this.link.send({ t: "pos", tick, x, y });
+      this.link.send({ t: "pos", tick, x, y, e: this.epoch });
       this.myHistory.push({ tick, x, y });
       if (this.myHistory.length > 120) this.myHistory.shift();
     }
@@ -268,6 +309,33 @@ export class ClientSession {
       }
     }
     return out;
+  }
+
+  /** Seconds into the encounter loop at the current host time (negative during lead-in). */
+  loopTime(): number {
+    const t = (this.hostTick() - this.loopStartTick) * TICK_MS / 1000;
+    return t < 0 ? t : t % this.encounter.loopLength;
+  }
+
+  /** Where a perfect player in your slot is right now, and where they're heading. */
+  ghost(): GhostView | undefined {
+    const b = this.ghostBuf;
+    if (!b.length) return undefined;
+    const t = this.hostTick() - this.interpDelayTicks();
+    let a = b[0];
+    let c = b[b.length - 1];
+    for (let i = b.length - 1; i > 0; i--) {
+      if (t >= b[i - 1].tick) {
+        a = b[i - 1];
+        c = b[i];
+        break;
+      }
+    }
+    const f = c.tick === a.tick ? 1 : Math.max(0, Math.min(1, (t - a.tick) / (c.tick - a.tick)));
+    return {
+      pos: { x: a.x + (c.x - a.x) * f, y: a.y + (c.y - a.y) * f },
+      dest: { x: c.dx, y: c.dy },
+    };
   }
 
   /** The mechanic currently being cast (for the cast bar). */

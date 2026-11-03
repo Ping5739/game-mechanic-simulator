@@ -41,13 +41,16 @@
 
     <div id="game" class="game" hidden>
       <section class="stage">
-        <div id="castbar" class="castbar" hidden>
-          <div class="castbar-name"><span id="cast-name"></span><span id="cast-time"></span></div>
-          <div class="castbar-track"><div id="cast-fill" class="castbar-fill"></div></div>
+        <div id="timeline" class="timeline"></div>
+        <div class="arena-wrap">
+          <div id="castbar" class="castbar" hidden>
+            <div class="castbar-name"><span id="cast-name"></span><span id="cast-time"></span></div>
+            <div class="castbar-track"><div id="cast-fill" class="castbar-fill"></div></div>
+          </div>
+          <canvas id="arena" aria-label="Arena. Move with WASD or arrow keys, or hold the mouse or a finger where you want to go."></canvas>
+          <div id="toast" class="toast" role="status" aria-live="assertive"></div>
+          <p class="controls">Move: WASD / arrows, or hold the mouse. Ghost: <kbd>G</kbd>. Stats: <kbd>`</kbd></p>
         </div>
-        <canvas id="arena" aria-label="Arena. Move with WASD or arrow keys, or hold the mouse or a finger where you want to go."></canvas>
-        <div id="toast" class="toast" role="status" aria-live="assertive"></div>
-        <p class="controls">Move: WASD / arrows, or hold the mouse. Stats: <kbd>`</kbd></p>
       </section>
 
       <aside class="rail">
@@ -60,6 +63,14 @@
         <section class="panel">
           <h2>Party</h2>
           <ol id="roster" class="roster"></ol>
+        </section>
+
+        <section class="panel">
+          <h2>Practice aids</h2>
+          <label class="check">
+            <input id="ghost-toggle" type="checkbox" checked />
+            <span>Show my ghost<small>Where a perfect player in your slot stands, and where they're heading next</small></span>
+          </label>
         </section>
 
         <section id="bot-panel" class="panel">

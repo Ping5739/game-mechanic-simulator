@@ -48,7 +48,12 @@ function loop(): void {
     for (const r of ev.results) post({ type: "result", r });
     if (ev.rosterChanged) post({ type: "roster", roster: roster(sim) });
     if (sim.tick % SNAPSHOT_EVERY === 0) {
-      post({ type: "snap", tick: sim.tick, p: [...sim.players.values()].map((p) => [p.id, r2(p.pos.x), r2(p.pos.y), p.fails]) });
+      post({
+        type: "snap",
+        tick: sim.tick,
+        p: [...sim.players.values()].map((p) => [p.id, r2(p.pos.x), r2(p.pos.y), p.fails]),
+        g: [...sim.ghosts].map(([id, g]) => [id, r2(g.pos.x), r2(g.pos.y), r2(g.dest.x), r2(g.dest.y)]),
+      });
     }
   }
   if (now - lastStatsAt >= 1000) {
@@ -76,15 +81,33 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
       if (!sim) return;
       const slot = sim.addHuman(m.id, m.name);
       if (!slot) post({ type: "full", id: m.id });
-      else post({ type: "joined", id: m.id, slot, tick: sim.tick, hazards: [...sim.hazards.values()] });
+      else
+        post({
+          type: "joined",
+          id: m.id,
+          slot,
+          tick: sim.tick,
+          epoch: sim.epoch,
+          loopStartTick: sim.loopStartTick,
+          hazards: [...sim.hazards.values()],
+        });
       break;
     }
     case "leave":
       sim?.removeHuman(m.id);
       break;
     case "sample":
-      sim?.applySample({ playerId: m.id, tick: m.tick, pos: { x: m.x, y: m.y } });
+      sim?.applySample({ playerId: m.id, tick: m.tick, pos: { x: m.x, y: m.y }, epoch: m.epoch });
       break;
+    case "seek": {
+      if (!sim) return;
+      const res = sim.seekTo(m.seconds);
+      const positions: Record<string, [number, number]> = {};
+      for (const [id, p] of Object.entries(res.positions)) positions[id] = [r2(p.x), r2(p.y)];
+      post({ type: "seek", epoch: res.epoch, tick: sim.tick, loopStartTick: res.loopStartTick, positions });
+      for (const h of res.hazards) post({ type: "hazard", h });
+      break;
+    }
     case "bots":
       sim?.setBotSettings(m.bots);
       break;

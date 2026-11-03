@@ -109,4 +109,6 @@ export interface InputSample {
   /** The host tick this position corresponds to (client's estimate). */
   tick: number;
   pos: Vec2;
+  /** Seek epoch the client was in when it sent this. */
+  epoch?: number;
 }

@@ -190,6 +190,12 @@ select {
 }
 
 .stage {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+}
+
+.arena-wrap {
   position: relative;
   min-height: 0;
 }
@@ -204,7 +210,7 @@ select {
 
 .castbar {
   position: absolute;
-  top: 14px;
+  top: 8px;
   left: 50%;
   transform: translateX(-50%);
   width: min(360px, calc(100% - 32px));
@@ -268,6 +274,139 @@ kbd {
   border: 1px solid var(--line);
   border-radius: 4px;
   font: inherit;
+}
+
+/* --------------------------------------------------------------- Timeline */
+
+.timeline {
+  padding: 10px 16px 4px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  user-select: none;
+}
+
+.tl-labels,
+.tl-track,
+.tl-scale {
+  position: relative;
+}
+
+.tl-labels {
+  height: 22px;
+}
+
+.tl-label {
+  position: absolute;
+  top: 0;
+  height: 22px;
+  padding: 0 6px 0 5px;
+  border: 0;
+  border-left: 2px solid currentColor;
+  background: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.tl-label:hover {
+  background: var(--surface-2);
+}
+
+.tl-label.done {
+  opacity: 0.5;
+}
+
+.tl-label.active {
+  color: var(--ink);
+}
+
+.k-aoe {
+  color: var(--aoe);
+}
+
+.k-stack {
+  color: var(--stack);
+}
+
+.k-spread {
+  color: var(--spread);
+}
+
+.tl-track {
+  height: 18px;
+  margin-top: 2px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.tl-block {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  min-width: 4px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.75;
+}
+
+.tl-block.done {
+  opacity: 0.3;
+}
+
+.tl-block.active {
+  opacity: 1;
+  box-shadow: 0 0 0 2px var(--ink);
+}
+
+.tl-playhead {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink);
+  pointer-events: none;
+}
+
+.tl-hover {
+  position: absolute;
+  top: calc(100% + 2px);
+  transform: translateX(-50%);
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tl-scale {
+  height: 18px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.tl-scale span {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+}
+
+.tl-scale span:first-child {
+  transform: none;
+}
+
+.tl-readonly .tl-track,
+.tl-readonly .tl-label {
+  cursor: default;
 }
 
 /* ------------------------------------------------------------------- Rail */
@@ -402,6 +541,32 @@ input[type="range"] {
   border-left-color: var(--fail);
 }
 
+.feed li.note {
+  border-left-color: var(--muted);
+  color: var(--muted);
+}
+
+.check {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  cursor: pointer;
+}
+
+.check input {
+  margin-top: 4px;
+  accent-color: var(--aoe);
+  width: 16px;
+  height: 16px;
+}
+
+.check small {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
 .feed li.mine {
   background: rgba(255, 90, 95, 0.12);
 }
@@ -422,7 +587,7 @@ input[type="range"] {
 @media (max-width: 760px) {
   .game {
     grid-template-columns: 1fr;
-    grid-template-rows: min(calc(100vw + 70px), 75vh) auto;
+    grid-template-rows: min(calc(100vw + 140px), 85vh) auto;
     height: auto;
     min-height: 100%;
   }

@@ -18,6 +18,16 @@ random puddles.
 Move with WASD / arrow keys, or hold the mouse (or a finger) where you want to
 go. Press <kbd>`</kbd> for network and performance stats.
 
+The bar across the top shows every mechanic in the loop with a playhead
+for "now". The host can click anywhere on it to jump to that moment, or click
+a mechanic's name to jump to 2 seconds before it. Everyone is placed where the
+strategy says they should be at that moment, and casts already underway
+restart part-way through. Arrow keys on the focused bar jump ±5 s.
+
+**Show my ghost** (or press <kbd>G</kbd>) draws a hollow copy of you: a
+perfect player in your slot following the strategy, with a dashed line to
+where it's heading next. A player who copies their ghost exactly never fails.
+
 Empty party slots are filled by bots. The host can make bots react
 instantly or like humans, and set a mistake chance so they occasionally
 ignore a mechanic.

@@ -17,6 +17,22 @@ import {
   type Vec2,
 } from "./types";
 
+export interface Ghost {
+  pos: Vec2;
+  /** Where the ghost is heading right now. */
+  dest: Vec2;
+  brain: BotBrain;
+}
+
+export interface SeekResult {
+  epoch: number;
+  loopStartTick: number;
+  /** New positions for every human (they get teleported here). */
+  positions: Record<string, Vec2>;
+  /** Mechanics already mid-cast at the new time. */
+  hazards: Hazard[];
+}
+
 export interface StepEvents {
   hazards: Hazard[];
   results: HitResult[];
@@ -40,6 +56,11 @@ export class Simulation {
   tick = 0;
   readonly players = new Map<string, PlayerState>();
   readonly hazards = new Map<number, Hazard>();
+  /** A "perfect player" per human, showing where they should be. */
+  readonly ghosts = new Map<string, Ghost>();
+  /** Bumped on every seek; position reports from an older epoch are ignored. */
+  epoch = 0;
+  loopStartTick = 0;
 
   private readonly history = new Map<string, HistoryEntry[]>();
   private readonly lastSample = new Map<string, HistoryEntry>();
@@ -47,7 +68,6 @@ export class Simulation {
   private readonly rng: Rng;
   private nextHazardId = 1;
   private timelineIndex = 0;
-  private loopStartTick = 0;
   private rosterChanged = true;
 
   constructor(
@@ -91,6 +111,7 @@ export class Simulation {
     this.players.set(id, { id, slot, name, isBot: false, pos, fails: 0 });
     this.history.set(id, [{ tick: this.tick, pos: { ...pos } }]);
     this.lastSample.set(id, { tick: this.tick, pos: { ...pos } });
+    this.ghosts.set(id, { pos: { ...pos }, dest: { ...pos }, brain: this.perfectBrain(id, slot) });
     this.rosterChanged = true;
     return slot;
   }
@@ -102,7 +123,12 @@ export class Simulation {
     this.players.delete(id);
     this.history.delete(id);
     this.lastSample.delete(id);
+    this.ghosts.delete(id);
     this.spawnBot(p.slot, p.pos);
+  }
+
+  private perfectBrain(id: string, slot: Slot): BotBrain {
+    return new BotBrain(id, slot, 1, { difficulty: "perfect", mistakeChance: 0 });
   }
 
   setBotSettings(settings: BotSettings): void {
@@ -122,6 +148,7 @@ export class Simulation {
   applySample(sample: InputSample): void {
     const p = this.players.get(sample.playerId);
     if (!p || p.isBot) return;
+    if ((sample.epoch ?? 0) !== this.epoch) return; // sent before a seek
     const prev = this.lastSample.get(p.id);
     let pos = clampToArena(sample.pos, this.encounter.arenaRadius);
     let tick = Math.round(sample.tick);
@@ -173,15 +200,16 @@ export class Simulation {
     // Bots think and move.
     for (const [id, brain] of this.bots) {
       const p = this.players.get(id)!;
-      const target = brain.decide(this, p);
-      const d = dist(p.pos, target);
-      const maxStep = MOVE_SPEED / TICK_RATE;
-      if (d > 1e-3) {
-        const stepLen = Math.min(d, maxStep);
-        const dir = norm(sub(target, p.pos));
-        p.pos = clampToArena({ x: p.pos.x + dir.x * stepLen, y: p.pos.y + dir.y * stepLen }, this.encounter.arenaRadius);
-      }
+      p.pos = this.moveToward(p.pos, brain.decide(this, p));
       this.pushHistory(id, { tick: this.tick, pos: { ...p.pos } });
+    }
+
+    // Ghosts move exactly like a perfect bot in the human's slot would.
+    for (const [id, g] of this.ghosts) {
+      const p = this.players.get(id);
+      if (!p) continue;
+      g.dest = g.brain.decide(this, { ...p, pos: g.pos });
+      g.pos = this.moveToward(g.pos, g.dest);
     }
 
     this.resolveDue(events);
@@ -191,6 +219,73 @@ export class Simulation {
       this.rosterChanged = false;
     }
     return events;
+  }
+
+  private moveToward(from: Vec2, target: Vec2): Vec2 {
+    const d = dist(from, target);
+    if (d <= 1e-3) return from;
+    const stepLen = Math.min(d, MOVE_SPEED / TICK_RATE);
+    const dir = norm(sub(target, from));
+    return clampToArena({ x: from.x + dir.x * stepLen, y: from.y + dir.y * stepLen }, this.encounter.arenaRadius);
+  }
+
+  /** Seconds into the current loop (negative during the lead-in). */
+  loopTime(): number {
+    return (this.tick - this.loopStartTick) / TICK_RATE;
+  }
+
+  /**
+   * Jump the encounter to a moment in the loop. Mechanics already being cast
+   * at that moment are restarted mid-cast, and everyone is placed where the
+   * strategy says they should be at that moment.
+   */
+  seekTo(seconds: number): SeekResult {
+    const loopTicks = Math.round(this.encounter.loopLength * TICK_RATE);
+    const t = Math.max(0, Math.min(loopTicks - 1, Math.round(seconds * TICK_RATE)));
+    this.epoch++;
+    this.hazards.clear();
+    this.loopStartTick = this.tick - t;
+
+    const spawned: Hazard[] = [];
+    let idx = 0;
+    for (const entry of this.encounter.timeline) {
+      const start = this.loopStartTick + Math.round(entry.at * TICK_RATE);
+      if (start > this.tick) break;
+      const resolve = start + Math.round(entry.cast * TICK_RATE);
+      if (resolve > this.tick) {
+        const h = this.spawnHazard(entry.mechanic, entry.key, start, resolve);
+        this.hazards.set(h.id, h);
+        spawned.push(h);
+      }
+      idx++;
+    }
+    this.timelineIndex = idx;
+
+    // Place everyone where a perfect player would be heading at this moment.
+    const positions: Record<string, Vec2> = {};
+    const perfect = new Map<string, BotBrain>();
+    for (const p of this.players.values()) perfect.set(p.id, this.perfectBrain(p.id, p.slot));
+    // Two passes so players who follow someone (e.g. a stack) see the
+    // target's new position rather than where they stood before the jump.
+    for (let pass = 0; pass < 2; pass++) {
+      for (const p of this.players.values()) {
+        p.pos = perfect.get(p.id)!.decide(this, { ...p, pos: { ...this.strategy.defaults[p.slot] } });
+      }
+    }
+    for (const p of this.players.values()) {
+      const pos = p.pos;
+      this.history.set(p.id, [{ tick: this.tick, pos: { ...pos } }]);
+      if (!p.isBot) {
+        this.lastSample.set(p.id, { tick: this.tick, pos: { ...pos } });
+        const g = this.ghosts.get(p.id);
+        if (g) {
+          g.pos = { ...pos };
+          g.dest = { ...pos };
+        }
+        positions[p.id] = { ...pos };
+      }
+    }
+    return { epoch: this.epoch, loopStartTick: this.loopStartTick, positions, hazards: spawned };
   }
 
   private scheduleTimeline(events: StepEvents): void {

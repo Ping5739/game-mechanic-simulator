@@ -1,6 +1,7 @@
 import "./style.css";
 import { ClientSession, type FeedItem } from "./client/client-session";
 import { Renderer } from "./client/renderer";
+import { TimelineBar } from "./client/timeline";
 import { transportFromUrl } from "./config";
 import { DEFAULT_ENCOUNTER_ID, ENCOUNTERS } from "./data";
 import { HostSession, linkFromConnection, type Link } from "./host/host-session";
@@ -163,6 +164,40 @@ function setupGame(client: ClientSession, host: HostSession | null): void {
     host.onRoomError = (e) => showToast(e, 5000);
   }
 
+  // Timeline ------------------------------------------------------------------
+  const timeline = new TimelineBar(
+    $("timeline"),
+    client.encounter,
+    host !== null,
+    (seconds) => host?.seek(seconds),
+    () => showToast("Only the host can move the timeline."),
+  );
+  client.onSeek = (seconds) => {
+    const li = document.createElement("li");
+    li.className = "note";
+    const s = Math.floor(seconds);
+    li.textContent = `Jumped to ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    $("feed").prepend(li);
+  };
+
+  // Ghost -----------------------------------------------------------------------
+  const ghostToggle = $<HTMLInputElement>("ghost-toggle");
+  try {
+    ghostToggle.checked = localStorage.getItem("gms-ghost") !== "off";
+  } catch {
+    /* ignore */
+  }
+  const applyGhost = () => {
+    renderer.showGhost = ghostToggle.checked;
+    try {
+      localStorage.setItem("gms-ghost", ghostToggle.checked ? "on" : "off");
+    } catch {
+      /* ignore */
+    }
+  };
+  ghostToggle.addEventListener("change", applyGhost);
+  applyGhost();
+
   // Bot settings ----------------------------------------------------------------
   const diff = $<HTMLSelectElement>("bot-difficulty");
   const mistakes = $<HTMLInputElement>("bot-mistakes");
@@ -235,6 +270,11 @@ function setupGame(client: ClientSession, host: HostSession | null): void {
     if ((e.target as HTMLElement).matches("input, select, textarea")) return;
     if (e.key === "`") {
       $("debug").hidden = !$("debug").hidden;
+      return;
+    }
+    if (e.key === "g" || e.key === "G") {
+      ghostToggle.checked = !ghostToggle.checked;
+      applyGhost();
       return;
     }
     keys.add(e.key.toLowerCase());
@@ -324,6 +364,7 @@ function setupGame(client: ClientSession, host: HostSession | null): void {
     frames++;
     client.update(dt, inputDir());
     renderer.draw(client);
+    timeline.update(client.loopTime());
     const cast = client.currentCast();
     castbar.hidden = !cast;
     if (cast) {

@@ -80,6 +80,11 @@ export class HostSession {
     return link;
   }
 
+  /** Jump the encounter to `seconds` into the loop (host only). */
+  seek(seconds: number): void {
+    this.toWorker({ type: "seek", seconds });
+  }
+
   setBots(bots: BotSettings): void {
     this.opts.bots = bots;
     this.toWorker({ type: "bots", bots });
@@ -123,7 +128,7 @@ export class HostSession {
       }
       case "pos":
         if (!this.members.has(id)) return;
-        this.toWorker({ type: "sample", id, tick: msg.tick, x: msg.x, y: msg.y });
+        this.toWorker({ type: "sample", id, tick: msg.tick, x: msg.x, y: msg.y, epoch: msg.e });
         break;
       case "ping": {
         const m = this.members.get(id);
@@ -144,6 +149,8 @@ export class HostSession {
           you: m.id,
           slot: m.slot,
           tick: m.tick,
+          epoch: m.epoch,
+          loopStartTick: m.loopStartTick,
           encounterId: this.opts.encounterId,
           strategyId: this.opts.strategyId,
           seed: this.seed,
@@ -160,8 +167,13 @@ export class HostSession {
         break;
       }
       case "snap":
-        this.broadcast({ t: "snap", tick: m.tick, p: m.p });
+        this.broadcast({ t: "snap", tick: m.tick, p: m.p, g: m.g });
         break;
+      case "seek": {
+        const { type: _type, ...info } = m;
+        this.broadcast({ t: "seek", ...info });
+        break;
+      }
       case "hazard":
         this.broadcast({ t: "hazard", h: m.h });
         break;

@@ -29,6 +29,8 @@ export class Renderer {
   private readonly ctx: CanvasRenderingContext2D;
   private colors = palette();
   private scale = 10;
+  /** Draw the "where you should be" ghost for your own slot. */
+  showGhost = true;
   private cx = 0;
   private cy = 0;
 
@@ -161,6 +163,8 @@ export class Renderer {
     ctx.fillStyle = c.boss;
     ctx.fill();
 
+    if (this.showGhost) this.drawGhost(s, positions);
+
     // Players that failed something in the last 1.5 s.
     const recentFails = new Set<string>();
     for (const h of s.hazards.values()) {
@@ -202,6 +206,73 @@ export class Renderer {
         ctx.stroke();
       }
     }
+  }
+
+  /**
+   * The ghost is a perfect player in your slot: a hollow copy of your marker,
+   * a dashed line to where it is heading, and a faint tether from you to it.
+   */
+  private drawGhost(s: ClientSession, positions: Map<string, Vec2>): void {
+    const g = s.ghost();
+    const me = positions.get(s.myId);
+    if (!g || !me) return;
+    const { ctx, colors: c } = this;
+    const k = this.scale;
+    const P = (p: Vec2): [number, number] => [this.cx + p.x * k, this.cy + p.y * k];
+    const roleColor = c[roleOf(s.slot)];
+    const r = Math.max(9, 0.8 * k);
+    const [gx, gy] = P(g.pos);
+    const [dx, dy] = P(g.dest);
+    const [mx, my] = P(me);
+
+    // Path the ghost is about to take.
+    if (Math.hypot(dx - gx, dy - gy) > r) {
+      ctx.beginPath();
+      ctx.moveTo(gx, gy);
+      ctx.lineTo(dx, dy);
+      ctx.strokeStyle = roleColor;
+      ctx.globalAlpha = 0.85;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Destination marker: a small ring with a dot.
+      ctx.beginPath();
+      ctx.arc(dx, dy, 6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(dx, dy, 2, 0, Math.PI * 2);
+      ctx.fillStyle = roleColor;
+      ctx.fill();
+    }
+
+    // Tether from you to the ghost when you're out of position.
+    const off = Math.hypot(gx - mx, gy - my);
+    if (off > r * 1.5) {
+      ctx.beginPath();
+      ctx.moveTo(mx, my);
+      ctx.lineTo(gx, gy);
+      ctx.strokeStyle = c.ink;
+      ctx.globalAlpha = 0.3;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([2, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // The ghost itself.
+    ctx.beginPath();
+    ctx.arc(gx, gy, r, 0, Math.PI * 2);
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = roleColor;
+    ctx.fill();
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = c.ink;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
   }
 
   /** Build a canvas path for a shape. Returns false if it can't be placed yet. */

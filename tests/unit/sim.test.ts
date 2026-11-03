@@ -88,6 +88,61 @@ describe("simulation", () => {
     expect(moved).toBeLessThan(1);
   });
 
+  it("a human who follows their ghost exactly never fails", () => {
+    const sim = new Simulation(enc.def, strat, 21, { difficulty: "realistic", mistakeChance: 0 });
+    sim.addHuman("human", "Tester", "R1");
+    const failures: string[] = [];
+    for (let i = 0; i < (enc.def.loopLength + 5) * TICK_RATE; i++) {
+      const g = sim.ghosts.get("human")!;
+      sim.applySample({ playerId: "human", tick: sim.tick + 1, pos: { ...g.pos }, epoch: sim.epoch });
+      for (const r of sim.step().results) failures.push(...r.reasons);
+    }
+    expect(failures).toEqual([]);
+  });
+
+  it("the ghost moves to the strategy spot for a mechanic", () => {
+    const sim = new Simulation(enc.def, strat, 3, { difficulty: "perfect", mistakeChance: 0 });
+    sim.addHuman("human", "Tester", "R1");
+    run(sim, 3 + 3 + 3.9); // just before Searing Ring (key "out") resolves
+    const g = sim.ghosts.get("human")!;
+    const spot = strat.positions.out.R1;
+    expect(Math.hypot(g.pos.x - spot.x, g.pos.y - spot.y)).toBeLessThan(0.5);
+  });
+
+  it("seeking restarts mid-cast mechanics and places everyone", () => {
+    const sim = new Simulation(enc.def, strat, 8, { difficulty: "perfect", mistakeChance: 0 });
+    sim.addHuman("human", "Tester", "MT");
+    run(sim, 5);
+    const res = sim.seekTo(26); // 1 s into "Converge" (stack, 5 s cast)
+    expect(sim.loopTime()).toBeCloseTo(26, 1);
+    expect(res.hazards.map((h) => h.name)).toEqual(["Converge"]);
+    expect(res.positions.human).toBeDefined();
+    expect(res.epoch).toBe(1);
+    // The rest of the loop plays out from there, cleanly for perfect bots,
+    // with the human following their ghost.
+    const failures: string[] = [];
+    const names: string[] = [];
+    for (let i = 0; i < 40 * TICK_RATE; i++) {
+      const g = sim.ghosts.get("human")!;
+      sim.applySample({ playerId: "human", tick: sim.tick + 1, pos: { ...g.pos }, epoch: sim.epoch });
+      for (const r of sim.step().results) {
+        failures.push(...r.reasons);
+        names.push(r.name);
+      }
+    }
+    expect(names.slice(0, 4)).toEqual(["Converge", "Piercing Beam", "Frontal Sweep", "Meteor Rain"]);
+    expect(failures).toEqual([]);
+  });
+
+  it("ignores position reports sent before a seek", () => {
+    const sim = new Simulation(enc.def, strat, 8, { difficulty: "perfect", mistakeChance: 0 });
+    sim.addHuman("human", "Tester", "MT");
+    run(sim, 2);
+    const res = sim.seekTo(10);
+    sim.applySample({ playerId: "human", tick: sim.tick + 1, pos: { x: 15, y: 0 }, epoch: 0 });
+    expect(sim.players.get("human")!.pos).toEqual(res.positions.human);
+  });
+
   it("returns a slot to a bot when a human leaves", () => {
     const sim = new Simulation(enc.def, strat, 5, { difficulty: "perfect", mistakeChance: 0 });
     expect(sim.addHuman("a", "A")).toBe("MT");
