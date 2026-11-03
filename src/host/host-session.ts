@@ -80,6 +80,13 @@ export class HostSession {
     return link;
   }
 
+  paused = false;
+
+  /** Freeze or resume the encounter for everyone (host only). */
+  setPaused(paused: boolean): void {
+    this.toWorker({ type: "pause", paused });
+  }
+
   /** Jump the encounter to `seconds` into the loop (host only). */
   seek(seconds: number): void {
     this.toWorker({ type: "seek", seconds });
@@ -128,7 +135,7 @@ export class HostSession {
       }
       case "pos":
         if (!this.members.has(id)) return;
-        this.toWorker({ type: "sample", id, tick: msg.tick, x: msg.x, y: msg.y, epoch: msg.e });
+        this.toWorker({ type: "sample", id, tick: msg.tick, x: msg.x, y: msg.y, epoch: msg.e, facing: msg.f });
         break;
       case "ping": {
         const m = this.members.get(id);
@@ -151,6 +158,7 @@ export class HostSession {
           tick: m.tick,
           epoch: m.epoch,
           loopStartTick: m.loopStartTick,
+          paused: m.paused,
           encounterId: this.opts.encounterId,
           strategyId: this.opts.strategyId,
           seed: this.seed,
@@ -167,7 +175,11 @@ export class HostSession {
         break;
       }
       case "snap":
-        this.broadcast({ t: "snap", tick: m.tick, p: m.p, g: m.g });
+        this.broadcast({ t: "snap", tick: m.tick, p: m.p, g: m.g, b: m.b });
+        break;
+      case "pause":
+        this.paused = m.paused;
+        this.broadcast({ t: "pause", paused: m.paused, tick: m.tick });
         break;
       case "seek": {
         const { type: _type, ...info } = m;

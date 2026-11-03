@@ -1,10 +1,17 @@
 import { ENCOUNTERS } from "../data";
 import type { BotSettings } from "../sim/bots";
 import { MOVE_SPEED, TICK_MS } from "../sim/constants";
-import { clampToArena, dist } from "../sim/math";
+import { clampToArena, degFromDir, dist } from "../sim/math";
 import type { EncounterDef, Hazard, HitResult, Slot, Vec2 } from "../sim/types";
 import { PROTOCOL_VERSION, r2, type HostMsg, type RosterEntry } from "../net/protocol";
 import type { Link } from "../host/host-session";
+
+interface Sample {
+  tick: number;
+  x: number;
+  y: number;
+  f: number;
+}
 
 interface Remote {
   id: string;
@@ -12,7 +19,7 @@ interface Remote {
   name: string;
   isBot: boolean;
   fails: number;
-  buf: { tick: number; x: number; y: number }[];
+  buf: Sample[];
 }
 
 export interface FeedItem {
@@ -30,13 +37,25 @@ interface GhostSample {
   dy: number;
 }
 
+/** A position plus the compass direction (degrees) the character faces. */
+export interface Placed extends Vec2 {
+  facing: number;
+}
+
 export interface GhostView {
   pos: Vec2;
   dest: Vec2;
+  facing: number;
 }
 
 export interface TrackedHazard extends Hazard {
   result?: HitResult;
+}
+
+/** Interpolate between two compass angles the short way round. */
+function lerpDeg(a: number, b: number, f: number): number {
+  const d = ((b - a + 540) % 360) - 180;
+  return (a + d * f + 360) % 360;
 }
 
 /**
@@ -53,6 +72,8 @@ export class ClientSession {
   bots!: BotSettings;
   ready = false;
   myPos: Vec2 = { x: 0, y: 0 };
+  myFacing = 0;
+  bossFacing = 0;
   rtt = 0;
   readonly players = new Map<string, Remote>();
   readonly hazards = new Map<number, TrackedHazard>();
@@ -61,7 +82,11 @@ export class ClientSession {
   /** Seek epoch; position reports carry it so the host can drop stale ones. */
   epoch = 0;
   loopStartTick = 0;
+  /** While paused, the clock stops and nobody can move. */
+  paused = false;
+  private pausedTick = 0;
   private ghostBuf: GhostSample[] = [];
+  private ghostFacing = 0;
 
   onReady: () => void = () => {};
   onFull: (reason: string) => void = () => {};
@@ -70,6 +95,7 @@ export class ClientSession {
   onFeed: (item: FeedItem) => void = () => {};
   onBots: () => void = () => {};
   onSeek: (loopSeconds: number) => void = () => {};
+  onPause: (paused: boolean) => void = () => {};
 
   private tickOffset: number | undefined;
   private shownTick = 0;
@@ -103,8 +129,9 @@ export class ClientSession {
   // Clock
   // -------------------------------------------------------------------------
 
-  /** Best estimate of the host's current tick (fractional). */
+  /** Best estimate of the host's current tick (fractional). Frozen while paused. */
   hostTick(now = performance.now()): number {
+    if (this.paused) return this.pausedTick;
     if (this.tickOffset === undefined) return 0;
     const t = now / TICK_MS + this.tickOffset;
     // Never run backwards; small corrections are absorbed by slowing down.
@@ -113,6 +140,7 @@ export class ClientSession {
   }
 
   private syncClock(snapTick: number): void {
+    if (this.paused) return;
     const now = performance.now();
     const measured = snapTick + this.rtt / 2 / TICK_MS - now / TICK_MS;
     if (this.tickOffset === undefined || Math.abs(measured - this.tickOffset) > 6) {
@@ -120,6 +148,19 @@ export class ClientSession {
       this.shownTick = now / TICK_MS + measured;
     } else {
       this.tickOffset += (measured - this.tickOffset) * 0.08;
+    }
+  }
+
+  private setPaused(paused: boolean, tick: number): void {
+    this.paused = paused;
+    if (paused) {
+      // Freeze exactly where the host stopped.
+      this.pausedTick = tick;
+      this.shownTick = tick;
+    } else {
+      // Carry on from the host's tick as if no time had passed.
+      this.tickOffset = tick + this.rtt / 2 / TICK_MS - performance.now() / TICK_MS;
+      this.shownTick = tick;
     }
   }
 
@@ -143,6 +184,7 @@ export class ClientSession {
         this.loopStartTick = m.loopStartTick;
         for (const h of m.hazards) this.hazards.set(h.id, h);
         this.syncClock(m.tick);
+        if (m.paused) this.setPaused(true, m.tick);
         this.ready = true;
         this.onReady();
         break;
@@ -155,10 +197,15 @@ export class ClientSession {
         this.rtt = this.rtt === 0 ? sample : this.rtt * 0.8 + sample * 0.2;
         break;
       }
+      case "pause":
+        this.setPaused(m.paused, m.tick);
+        this.onPause(m.paused);
+        break;
       case "snap": {
         if (!this.ready) return;
         this.syncClock(m.tick);
-        for (const [id, x, y, fails] of m.p) {
+        this.bossFacing = m.b;
+        for (const [id, x, y, fails, f] of m.p) {
           let r = this.players.get(id);
           if (!r) {
             r = { id, slot: "MT", name: id, isBot: id.startsWith("bot:"), fails, buf: [] };
@@ -168,13 +215,14 @@ export class ClientSession {
           if (id === this.myId) {
             if (!this.gotFirstSnap) {
               this.myPos = { x, y };
+              this.myFacing = f;
               this.gotFirstSnap = true;
             } else {
               this.reconcile(m.tick, x, y);
             }
             continue;
           }
-          r.buf.push({ tick: m.tick, x, y });
+          r.buf.push({ tick: m.tick, x, y, f });
           if (r.buf.length > 40) r.buf.shift();
         }
         for (const [id, x, y, dx, dy] of m.g) {
@@ -200,6 +248,10 @@ export class ClientSession {
         if (mine) {
           this.myPos = { x: mine[0], y: mine[1] };
           this.ghostBuf.push({ tick: m.tick, x: mine[0], y: mine[1], dx: mine[0], dy: mine[1] });
+        }
+        if (this.paused) {
+          this.pausedTick = m.tick;
+          this.shownTick = m.tick;
         }
         this.lastSentTick = -1;
         this.onSeek((m.tick - m.loopStartTick) * TICK_MS / 1000);
@@ -257,9 +309,12 @@ export class ClientSession {
   // Per-frame update
   // -------------------------------------------------------------------------
 
-  /** Move our own character and report our position once per host tick. */
+  /**
+   * Move our own character (input is a world-space direction) and report our
+   * position once per host tick. Nothing moves while the encounter is paused.
+   */
   update(dtSec: number, input: Vec2): void {
-    if (!this.ready || !this.gotFirstSnap) return;
+    if (!this.ready || !this.gotFirstSnap || this.paused) return;
     const l = Math.hypot(input.x, input.y);
     if (l > 0) {
       const step = Math.min(dtSec, 0.1) * MOVE_SPEED;
@@ -267,13 +322,14 @@ export class ClientSession {
         { x: this.myPos.x + (input.x / l) * step, y: this.myPos.y + (input.y / l) * step },
         this.encounter.arenaRadius,
       );
+      this.myFacing = degFromDir(input);
     }
     const tick = Math.floor(this.hostTick());
     if (tick !== this.lastSentTick) {
       this.lastSentTick = tick;
       const x = r2(this.myPos.x);
       const y = r2(this.myPos.y);
-      this.link.send({ t: "pos", tick, x, y, e: this.epoch });
+      this.link.send({ t: "pos", tick, x, y, e: this.epoch, f: Math.round(this.myFacing) });
       this.myHistory.push({ tick, x, y });
       if (this.myHistory.length > 120) this.myHistory.shift();
     }
@@ -281,28 +337,28 @@ export class ClientSession {
     for (const [id, h] of this.hazards) if (tick > h.resolveTick + 45) this.hazards.delete(id);
   }
 
-  /** Positions to draw this frame. */
-  renderPositions(): Map<string, Vec2> {
-    const out = new Map<string, Vec2>();
+  /** Positions and facings to draw this frame. */
+  renderPositions(): Map<string, Placed> {
+    const out = new Map<string, Placed>();
     const t = this.hostTick() - this.interpDelayTicks();
     for (const r of this.players.values()) {
       if (r.id === this.myId) {
-        out.set(r.id, this.myPos);
+        out.set(r.id, { ...this.myPos, facing: this.myFacing });
         continue;
       }
       const b = r.buf;
       if (!b.length) continue;
-      if (t <= b[0].tick) out.set(r.id, { x: b[0].x, y: b[0].y });
+      if (t <= b[0].tick) out.set(r.id, { x: b[0].x, y: b[0].y, facing: b[0].f });
       else if (t >= b[b.length - 1].tick) {
         const last = b[b.length - 1];
-        out.set(r.id, { x: last.x, y: last.y });
+        out.set(r.id, { x: last.x, y: last.y, facing: last.f });
       } else {
         for (let i = b.length - 1; i > 0; i--) {
           const a = b[i - 1];
           const c = b[i];
           if (t >= a.tick && t <= c.tick) {
             const f = (t - a.tick) / Math.max(1e-6, c.tick - a.tick);
-            out.set(r.id, { x: a.x + (c.x - a.x) * f, y: a.y + (c.y - a.y) * f });
+            out.set(r.id, { x: a.x + (c.x - a.x) * f, y: a.y + (c.y - a.y) * f, facing: lerpDeg(a.f, c.f, f) });
             break;
           }
         }
@@ -332,10 +388,11 @@ export class ClientSession {
       }
     }
     const f = c.tick === a.tick ? 1 : Math.max(0, Math.min(1, (t - a.tick) / (c.tick - a.tick)));
-    return {
-      pos: { x: a.x + (c.x - a.x) * f, y: a.y + (c.y - a.y) * f },
-      dest: { x: c.dx, y: c.dy },
-    };
+    const pos = { x: a.x + (c.x - a.x) * f, y: a.y + (c.y - a.y) * f };
+    const dest = { x: c.dx, y: c.dy };
+    // The ghost faces where it is heading; when it has arrived it keeps its facing.
+    if (dist(pos, dest) > 0.3) this.ghostFacing = degFromDir({ x: dest.x - pos.x, y: dest.y - pos.y });
+    return { pos, dest, facing: this.ghostFacing };
   }
 
   /** The mechanic currently being cast (for the cast bar). */
@@ -351,10 +408,5 @@ export class ClientSession {
       progress: (t - best.startTick) / (best.resolveTick - best.startTick),
       secondsLeft: ((best.resolveTick - t) * TICK_MS) / 1000,
     };
-  }
-
-  distanceTo(id: string): number {
-    const p = this.renderPositions().get(id);
-    return p ? dist(p, this.myPos) : Infinity;
   }
 }

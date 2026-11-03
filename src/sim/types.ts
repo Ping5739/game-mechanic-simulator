@@ -24,6 +24,8 @@ export interface PlayerState {
   name: string;
   isBot: boolean;
   pos: Vec2;
+  /** Compass degrees the player faces (0 = north, 90 = east). */
+  facing: number;
   fails: number;
 }
 
@@ -111,4 +113,6 @@ export interface InputSample {
   pos: Vec2;
   /** Seek epoch the client was in when it sent this. */
   epoch?: number;
+  /** Compass degrees the player faces. */
+  facing?: number;
 }

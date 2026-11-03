@@ -19,6 +19,12 @@ export function dirFromDeg(deg: number): Vec2 {
   return { x: Math.sin(r), y: -Math.cos(r) };
 }
 
+/** Compass degrees (0 = north, 90 = east) of a direction vector. */
+export function degFromDir(d: Vec2): number {
+  const deg = (Math.atan2(d.x, -d.y) * 180) / Math.PI;
+  return (deg + 360) % 360;
+}
+
 /** Clamp a point to stay inside a circular arena centered on the origin. */
 export function clampToArena(p: Vec2, radius: number): Vec2 {
   const l = len(p);

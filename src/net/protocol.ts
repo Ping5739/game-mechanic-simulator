@@ -1,8 +1,8 @@
 import type { BotSettings } from "../sim/bots";
 import type { Hazard, HitResult, Slot } from "../sim/types";
 
-/** Compact player row in a snapshot: [id, x, y, fails]. */
-export type SnapPlayer = [id: string, x: number, y: number, fails: number];
+/** Compact player row in a snapshot: [id, x, y, fails, facingDeg]. */
+export type SnapPlayer = [id: string, x: number, y: number, fails: number, facing: number];
 
 /** Ghost row in a snapshot: [humanId, x, y, destX, destY]. */
 export type SnapGhost = [id: string, x: number, y: number, dx: number, dy: number];
@@ -32,6 +32,7 @@ export type HostMsg =
       tick: number;
       epoch: number;
       loopStartTick: number;
+      paused: boolean;
       encounterId: string;
       strategyId: string;
       seed: number;
@@ -39,7 +40,8 @@ export type HostMsg =
       hazards: Hazard[];
     }
   | { t: "full"; reason: string }
-  | { t: "snap"; tick: number; p: SnapPlayer[]; g: SnapGhost[] }
+  | { t: "snap"; tick: number; p: SnapPlayer[]; g: SnapGhost[]; b: number }
+  | { t: "pause"; paused: boolean; tick: number }
   | ({ t: "seek" } & SeekInfo)
   | { t: "hazard"; h: Hazard }
   | { t: "result"; r: HitResult }
@@ -51,10 +53,10 @@ export type HostMsg =
 
 export type ClientMsg =
   | { t: "hello"; name: string; version: number }
-  | { t: "pos"; tick: number; x: number; y: number; e: number }
+  | { t: "pos"; tick: number; x: number; y: number; e: number; f: number }
   | { t: "ping"; c: number; rtt?: number };
 
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 
 /** Round to 2 decimals to keep messages small. */
 export const r2 = (n: number) => Math.round(n * 100) / 100;

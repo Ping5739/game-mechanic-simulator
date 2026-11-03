@@ -1,6 +1,7 @@
 import "./style.css";
 import { ClientSession, type FeedItem } from "./client/client-session";
-import { Renderer } from "./client/renderer";
+import type { View } from "./client/view";
+import { View2D } from "./client/view2d";
 import { TimelineBar } from "./client/timeline";
 import { transportFromUrl } from "./config";
 import { DEFAULT_ENCOUNTER_ID, ENCOUNTERS } from "./data";
@@ -145,8 +146,68 @@ function inviteLink(code: string): string {
 }
 
 function setupGame(client: ClientSession, host: HostSession | null): void {
-  const canvas = $<HTMLCanvasElement>("arena");
-  const renderer = new Renderer(canvas);
+  // Views: 2D top-down and 3D. The 3D code (Three.js) loads on first use.
+  const view2d = new View2D($<HTMLCanvasElement>("arena"));
+  let view3d: View | undefined;
+  let view: View = view2d;
+  let showGhost = true;
+  const viewButtons = document.querySelectorAll<HTMLButtonElement>("[data-view]");
+  const setView = async (kind: "2d" | "3d") => {
+    if (kind === "3d" && !view3d) {
+      try {
+        const { View3D } = await import("./client/view3d");
+        view3d = new View3D($<HTMLCanvasElement>("arena3d"), $("arena-wrap"));
+      } catch (err) {
+        console.error(err);
+        showToast("3D isn't available in this browser (WebGL is off). Showing 2D.", 4000);
+        kind = "2d";
+      }
+    }
+    view = kind === "3d" && view3d ? view3d : view2d;
+    view2d.setVisible(view === view2d);
+    view3d?.setVisible(view === view3d);
+    view.showGhost = showGhost;
+    for (const b of viewButtons) b.setAttribute("aria-pressed", String(b.dataset.view === view.kind));
+    $("hint-3d").hidden = view.kind !== "3d";
+    try {
+      localStorage.setItem("gms-view", view.kind);
+    } catch {
+      /* ignore */
+    }
+  };
+  for (const b of viewButtons) b.addEventListener("click", () => void setView(b.dataset.view as "2d" | "3d"));
+  let savedView: string | null = null;
+  try {
+    savedView = localStorage.getItem("gms-view");
+  } catch {
+    /* ignore */
+  }
+  void setView(savedView === "2d" ? "2d" : "3d");
+  // Handy for debugging in the console (and used by the browser tests).
+  Object.assign((window as unknown as { gms: object }).gms, { view: () => view, setView });
+
+  // Pause -------------------------------------------------------------------------
+  const pauseBtn = $<HTMLButtonElement>("pause");
+  const togglePause = () => {
+    if (!host) {
+      showToast("Only the host can pause.");
+      return;
+    }
+    host.setPaused(!client.paused);
+  };
+  const showPaused = (paused: boolean) => {
+    pauseBtn.textContent = paused ? "Resume" : "Pause";
+    pauseBtn.setAttribute("aria-pressed", String(paused));
+    $("paused-banner").hidden = !paused;
+    $("paused-who").textContent = host ? "Press Space or Resume to continue." : "The host paused the encounter.";
+  };
+  pauseBtn.addEventListener("click", togglePause);
+  if (!host) pauseBtn.disabled = true;
+  client.onPause = (paused) => {
+    showPaused(paused);
+    keys.clear();
+  };
+  showPaused(client.paused);
 
   // Room code -----------------------------------------------------------------
   if (host?.room) {
@@ -188,7 +249,8 @@ function setupGame(client: ClientSession, host: HostSession | null): void {
     /* ignore */
   }
   const applyGhost = () => {
-    renderer.showGhost = ghostToggle.checked;
+    showGhost = ghostToggle.checked;
+    view.showGhost = showGhost;
     try {
       localStorage.setItem("gms-ghost", ghostToggle.checked ? "on" : "off");
     } catch {
@@ -277,27 +339,20 @@ function setupGame(client: ClientSession, host: HostSession | null): void {
       applyGhost();
       return;
     }
+    if (e.key === " ") {
+      e.preventDefault();
+      if (!e.repeat) togglePause();
+      return;
+    }
+    if (e.key === "v" || e.key === "V") {
+      void setView(view.kind === "3d" ? "2d" : "3d");
+      return;
+    }
     keys.add(e.key.toLowerCase());
     if (e.key.startsWith("Arrow")) e.preventDefault();
   });
   window.addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
   window.addEventListener("blur", () => keys.clear());
-
-  let pointer: Vec2 | undefined;
-  const pointerToWorld = (e: PointerEvent) => {
-    const r = canvas.getBoundingClientRect();
-    pointer = renderer.toWorld(e.clientX - r.left, e.clientY - r.top);
-  };
-  canvas.addEventListener("pointerdown", (e) => {
-    canvas.setPointerCapture(e.pointerId);
-    pointerToWorld(e);
-  });
-  canvas.addEventListener("pointermove", (e) => {
-    if (pointer) pointerToWorld(e);
-  });
-  const release = () => (pointer = undefined);
-  canvas.addEventListener("pointerup", release);
-  canvas.addEventListener("pointercancel", release);
 
   const inputDir = (): Vec2 => {
     let x = 0;
@@ -306,13 +361,7 @@ function setupGame(client: ClientSession, host: HostSession | null): void {
     if (keys.has("d") || keys.has("arrowright")) x += 1;
     if (keys.has("w") || keys.has("arrowup")) y -= 1;
     if (keys.has("s") || keys.has("arrowdown")) y += 1;
-    if (x || y) return { x, y };
-    if (pointer) {
-      const dx = pointer.x - client.myPos.x;
-      const dy = pointer.y - client.myPos.y;
-      if (Math.hypot(dx, dy) > 0.15) return { x: dx, y: dy };
-    }
-    return { x: 0, y: 0 };
+    return x || y ? view.toWorldInput({ x, y }) : { x: 0, y: 0 };
   };
 
   $("leave").addEventListener("click", () => {
@@ -363,7 +412,7 @@ function setupGame(client: ClientSession, host: HostSession | null): void {
     last = now;
     frames++;
     client.update(dt, inputDir());
-    renderer.draw(client);
+    view.draw(client);
     timeline.update(client.loopTime());
     const cast = client.currentCast();
     castbar.hidden = !cast;

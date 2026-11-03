@@ -1,6 +1,6 @@
 import { BotBrain, type BotSettings } from "./bots";
 import { HISTORY_TICKS, MOVE_SPEED, RESOLVE_GRACE_TICKS, TICK_RATE } from "./constants";
-import { clampToArena, dirFromDeg, dist, inShape, norm, scale, sub, v } from "./math";
+import { clampToArena, degFromDir, dirFromDeg, dist, inShape, norm, scale, sub, v } from "./math";
 import { Rng } from "./rng";
 import type { CompiledStrategy } from "./strategy";
 import {
@@ -61,6 +61,8 @@ export class Simulation {
   /** Bumped on every seek; position reports from an older epoch are ignored. */
   epoch = 0;
   loopStartTick = 0;
+  /** The boss turns to face its directional attacks (cones, lines). */
+  bossFacing = 0;
 
   private readonly history = new Map<string, HistoryEntry[]>();
   private readonly lastSample = new Map<string, HistoryEntry>();
@@ -90,7 +92,7 @@ export class Simulation {
   private spawnBot(slot: Slot, at?: Vec2): void {
     const id = `bot:${slot}`;
     const pos = at ?? { ...this.strategy.defaults[slot] };
-    this.players.set(id, { id, slot, name: `${slot} (bot)`, isBot: true, pos, fails: 0 });
+    this.players.set(id, { id, slot, name: `${slot} (bot)`, isBot: true, pos, facing: 0, fails: 0 });
     this.bots.set(id, new BotBrain(id, slot, this.seed ^ slot.charCodeAt(0) * 7919 ^ slot.charCodeAt(1) * 104729, this.botSettings));
     this.history.set(id, [{ tick: this.tick, pos: { ...pos } }]);
     this.rosterChanged = true;
@@ -108,7 +110,7 @@ export class Simulation {
     this.bots.delete(bot.id);
     this.history.delete(bot.id);
     const pos = { ...bot.pos };
-    this.players.set(id, { id, slot, name, isBot: false, pos, fails: 0 });
+    this.players.set(id, { id, slot, name, isBot: false, pos, facing: bot.facing, fails: 0 });
     this.history.set(id, [{ tick: this.tick, pos: { ...pos } }]);
     this.lastSample.set(id, { tick: this.tick, pos: { ...pos } });
     this.ghosts.set(id, { pos: { ...pos }, dest: { ...pos }, brain: this.perfectBrain(id, slot) });
@@ -160,6 +162,7 @@ export class Simulation {
       if (d > maxStep) pos = { x: prev.pos.x + (delta.x / d) * maxStep, y: prev.pos.y + (delta.y / d) * maxStep };
     }
     p.pos = pos;
+    if (typeof sample.facing === "number" && Number.isFinite(sample.facing)) p.facing = ((sample.facing % 360) + 360) % 360;
     const entry = { tick, pos: { ...pos } };
     this.lastSample.set(p.id, entry);
     this.pushHistory(p.id, entry);
@@ -200,7 +203,9 @@ export class Simulation {
     // Bots think and move.
     for (const [id, brain] of this.bots) {
       const p = this.players.get(id)!;
+      const before = p.pos;
       p.pos = this.moveToward(p.pos, brain.decide(this, p));
+      if (dist(before, p.pos) > 1e-4) p.facing = degFromDir(sub(p.pos, before));
       this.pushHistory(id, { tick: this.tick, pos: { ...p.pos } });
     }
 
@@ -355,10 +360,12 @@ export class Simulation {
         const a = this.resolveAnchor(m.toward);
         const dir = norm(a.pos.x === 0 && a.pos.y === 0 ? dirFromDeg(this.rng.int(4) * 90) : a.pos);
         const origin = scale(dir, -m.length / 2);
+        this.bossFacing = degFromDir(dir);
         return { ...base, shapes: [{ kind: "rect", origin, dir, length: m.length, width: m.width }], targets: a.player ? [a.player] : undefined };
       }
       case "cone": {
         const deg = m.facingDeg === "randomCardinal" ? this.rng.int(4) * 90 : m.facingDeg;
+        this.bossFacing = deg;
         return {
           ...base,
           shapes: [{ kind: "cone", origin: v(0, 0), dir: dirFromDeg(deg), r: m.radius, halfAngle: (m.angleDeg * Math.PI) / 360 }],

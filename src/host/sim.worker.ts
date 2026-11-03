@@ -18,6 +18,7 @@ import type { FromWorker, ToWorker } from "./worker-protocol";
 declare const self: DedicatedWorkerGlobalScope;
 
 let sim: Simulation | undefined;
+let paused = false;
 let startTime = 0;
 let stepTimes: number[] = [];
 let ticksThisSecond = 0;
@@ -29,9 +30,23 @@ function roster(s: Simulation): RosterEntry[] {
   return [...s.players.values()].map((p) => ({ id: p.id, slot: p.slot, name: p.name, isBot: p.isBot }));
 }
 
+function postSnap(s: Simulation): void {
+  post({
+    type: "snap",
+    tick: s.tick,
+    p: [...s.players.values()].map((p) => [p.id, r2(p.pos.x), r2(p.pos.y), p.fails, Math.round(p.facing)]),
+    g: [...s.ghosts].map(([id, g]) => [id, r2(g.pos.x), r2(g.pos.y), r2(g.dest.x), r2(g.dest.y)]),
+    b: Math.round(s.bossFacing),
+  });
+}
+
 function loop(): void {
   if (!sim) return;
   const now = performance.now();
+  if (paused) {
+    lastStatsAt = now;
+    return;
+  }
   let target = Math.floor((now - startTime) / TICK_MS);
   // If we fell far behind (e.g. the machine slept), skip ahead instead of
   // running hundreds of ticks in a burst.
@@ -47,14 +62,7 @@ function loop(): void {
     for (const h of ev.hazards) post({ type: "hazard", h });
     for (const r of ev.results) post({ type: "result", r });
     if (ev.rosterChanged) post({ type: "roster", roster: roster(sim) });
-    if (sim.tick % SNAPSHOT_EVERY === 0) {
-      post({
-        type: "snap",
-        tick: sim.tick,
-        p: [...sim.players.values()].map((p) => [p.id, r2(p.pos.x), r2(p.pos.y), p.fails]),
-        g: [...sim.ghosts].map(([id, g]) => [id, r2(g.pos.x), r2(g.pos.y), r2(g.dest.x), r2(g.dest.y)]),
-      });
-    }
+    if (sim.tick % SNAPSHOT_EVERY === 0) postSnap(sim);
   }
   if (now - lastStatsAt >= 1000) {
     const avg = stepTimes.length ? stepTimes.reduce((a, b) => a + b, 0) / stepTimes.length : 0;
@@ -89,6 +97,7 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
           tick: sim.tick,
           epoch: sim.epoch,
           loopStartTick: sim.loopStartTick,
+          paused,
           hazards: [...sim.hazards.values()],
         });
       break;
@@ -97,7 +106,8 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
       sim?.removeHuman(m.id);
       break;
     case "sample":
-      sim?.applySample({ playerId: m.id, tick: m.tick, pos: { x: m.x, y: m.y }, epoch: m.epoch });
+      // While paused nobody moves, so late reports are dropped.
+      if (!paused) sim?.applySample({ playerId: m.id, tick: m.tick, pos: { x: m.x, y: m.y }, epoch: m.epoch, facing: m.facing });
       break;
     case "seek": {
       if (!sim) return;
@@ -106,6 +116,15 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
       for (const [id, p] of Object.entries(res.positions)) positions[id] = [r2(p.x), r2(p.y)];
       post({ type: "seek", epoch: res.epoch, tick: sim.tick, loopStartTick: res.loopStartTick, positions });
       for (const h of res.hazards) post({ type: "hazard", h });
+      postSnap(sim); // so a paused room still sees the new positions
+      break;
+    }
+    case "pause": {
+      if (!sim || paused === m.paused) return;
+      paused = m.paused;
+      // Resume exactly where we stopped, without catching up the paused time.
+      if (!paused) startTime = performance.now() - sim.tick * TICK_MS;
+      post({ type: "pause", paused, tick: sim.tick });
       break;
     }
     case "bots":

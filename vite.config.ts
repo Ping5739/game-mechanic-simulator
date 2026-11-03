@@ -7,6 +7,8 @@ export default defineConfig({
   build: {
     target: "es2022",
     sourcemap: true,
+    // The 3D view (Three.js) is a separate, lazily loaded chunk of ~140 KB gzipped.
+    chunkSizeWarningLimit: 700,
   },
   worker: {
     format: "es",

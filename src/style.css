@@ -200,15 +200,101 @@ select {
   min-height: 0;
 }
 
-#arena {
+#arena,
+#arena3d {
   display: block;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   touch-action: none;
-  cursor: crosshair;
+}
+
+#arena3d {
+  cursor: grab;
+}
+
+#arena3d.rotating {
+  cursor: grabbing;
+}
+
+.labels3d {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.label3d {
+  font: 600 12px/1 var(--font);
+  color: var(--ink);
+  text-shadow: 0 1px 2px #000, 0 0 4px #000;
+  white-space: nowrap;
+}
+
+.label3d.me {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.label3d.cardinal {
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.label3d.stack-label {
+  color: var(--stack);
+  font-weight: 700;
+}
+
+.paused-banner {
+  position: absolute;
+  top: 54px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
+  padding: 6px 18px 8px;
+  border: 1px solid var(--stack);
+  border-radius: 8px;
+  background: rgba(22, 27, 44, 0.85);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.paused-banner strong {
+  font-size: 1.4rem;
+  color: var(--stack);
+}
+
+.paused-banner span {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.segmented button {
+  padding: 7px 0;
+  border: 0;
+  background: var(--surface-2);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segmented button[aria-pressed="true"] {
+  background: var(--aoe);
+  color: #241405;
 }
 
 .castbar {
+  z-index: 2;
   position: absolute;
   top: 8px;
   left: 50%;
@@ -241,6 +327,7 @@ select {
 }
 
 .toast {
+  z-index: 3;
   position: absolute;
   left: 50%;
   bottom: 52px;
@@ -261,6 +348,7 @@ select {
 }
 
 .controls {
+  z-index: 2;
   position: absolute;
   left: 16px;
   bottom: 10px;
@@ -278,10 +366,29 @@ kbd {
 
 /* --------------------------------------------------------------- Timeline */
 
-.timeline {
+.timeline-bar {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: center;
   padding: 10px 16px 4px;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
+}
+
+.pause-btn {
+  width: 92px;
+  padding: 8px 0;
+}
+
+.pause-btn[aria-pressed="true"] {
+  background: var(--stack);
+  border-color: var(--stack);
+  color: #2a2205;
+}
+
+.timeline {
+  min-width: 0;
   user-select: none;
 }
 

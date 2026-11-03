@@ -15,8 +15,32 @@ random puddles.
 - **Create a room** – you get a 5-letter code. Click it to copy an invite link.
 - **Join room** – enter a friend's code (or open their invite link).
 
-Move with WASD / arrow keys, or hold the mouse (or a finger) where you want to
-go. Press <kbd>`</kbd> for network and performance stats.
+### Controls
+
+| Key / mouse | Does |
+|---|---|
+| <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / arrows | Move. In 3D, relative to the camera; in 2D, W is north |
+| Hold right mouse + drag (3D) | Turn the camera; scroll to zoom |
+| <kbd>Space</kbd> | Pause / resume (host only) |
+| <kbd>G</kbd> | Show / hide your ghost |
+| <kbd>V</kbd> | Switch between 3D and 2D top-down |
+| <kbd>`</kbd> | Network and performance stats |
+
+### Views
+
+The 3D view is the default; the 2D top-down view is one click (or <kbd>V</kbd>)
+away. Characters are upside-down tetrahedra standing on their tip: the tip
+is the hitbox, and the white edge running up to the front corner shows which
+way they face. The boss is a larger, half-transparent tetrahedron that turns
+toward its directional attacks; its hitbox is the dashed ring on the floor.
+The 2D view draws the same shapes seen from above.
+
+### Pause
+
+The host can pause at any time (Space or the Pause button). Everything
+freezes for everyone, including movement, but you can still look around,
+toggle the ghost and see its route, and the host can jump the timeline while
+paused.
 
 The bar across the top shows every mechanic in the loop with a playhead
 for "now". The host can click anywhere on it to jump to that moment, or click

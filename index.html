@@ -41,15 +41,27 @@
 
     <div id="game" class="game" hidden>
       <section class="stage">
-        <div id="timeline" class="timeline"></div>
-        <div class="arena-wrap">
+        <div class="timeline-bar">
+          <button id="pause" class="btn pause-btn" aria-pressed="false" title="Pause or resume the encounter (Space)">Pause</button>
+          <div id="timeline" class="timeline"></div>
+        </div>
+        <div id="arena-wrap" class="arena-wrap">
           <div id="castbar" class="castbar" hidden>
             <div class="castbar-name"><span id="cast-name"></span><span id="cast-time"></span></div>
             <div class="castbar-track"><div id="cast-fill" class="castbar-fill"></div></div>
           </div>
-          <canvas id="arena" aria-label="Arena. Move with WASD or arrow keys, or hold the mouse or a finger where you want to go."></canvas>
+          <canvas id="arena" aria-label="Arena, top-down view. Move with WASD or the arrow keys."></canvas>
+          <canvas id="arena3d" aria-label="Arena, 3D view. Move with WASD; hold the right mouse button and drag to turn the camera." hidden></canvas>
+          <div id="paused-banner" class="paused-banner" hidden>
+            <strong>Paused</strong>
+            <span id="paused-who"></span>
+          </div>
           <div id="toast" class="toast" role="status" aria-live="assertive"></div>
-          <p class="controls">Move: WASD / arrows, or hold the mouse. Ghost: <kbd>G</kbd>. Stats: <kbd>`</kbd></p>
+          <p class="controls">
+            Move <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>
+            <span id="hint-3d">· Camera: hold right mouse and drag, scroll to zoom</span>
+            · Pause <kbd>Space</kbd> · Ghost <kbd>G</kbd> · View <kbd>V</kbd>
+          </p>
         </div>
       </section>
 
@@ -67,6 +79,10 @@
 
         <section class="panel">
           <h2>Practice aids</h2>
+          <div class="segmented" role="group" aria-label="View">
+            <button type="button" data-view="3d" aria-pressed="true">3D</button>
+            <button type="button" data-view="2d" aria-pressed="false">2D top-down</button>
+          </div>
           <label class="check">
             <input id="ghost-toggle" type="checkbox" checked />
             <span>Show my ghost<small>Where a perfect player in your slot stands, and where they're heading next</small></span>

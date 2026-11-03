@@ -1,33 +1,18 @@
+import { dirFromDeg } from "../sim/math";
 import type { Shape, Vec2 } from "../sim/types";
 import { roleOf } from "../sim/types";
-import type { ClientSession } from "./client-session";
+import type { ClientSession, Placed } from "./client-session";
+import { RESOLVE_FLASH_TICKS, cssPalette, type View } from "./view";
 
-/** Colors are read from CSS custom properties so the palette lives in one place. */
-function palette() {
-  const s = getComputedStyle(document.documentElement);
-  const g = (n: string) => s.getPropertyValue(n).trim();
-  return {
-    floor: g("--floor"),
-    floorLine: g("--floor-line"),
-    rim: g("--rim"),
-    ink: g("--ink"),
-    muted: g("--muted"),
-    boss: g("--boss"),
-    aoe: g("--aoe"),
-    stack: g("--stack"),
-    spread: g("--spread"),
-    fail: g("--fail"),
-    tank: g("--tank"),
-    healer: g("--healer"),
-    dps: g("--dps"),
-  };
-}
-
-const RESOLVE_FLASH_TICKS = 12;
-
-export class Renderer {
+/**
+ * Top-down view. Characters are drawn as the 3D view's inverted tetrahedra
+ * seen from above: a triangle whose front corner points where they face, a
+ * line along the facing edge, and a dot at the tip (the hitbox).
+ */
+export class View2D implements View {
+  readonly kind = "2d";
   private readonly ctx: CanvasRenderingContext2D;
-  private colors = palette();
+  private colors = cssPalette();
   private scale = 10;
   /** Draw the "where you should be" ghost for your own slot. */
   showGhost = true;
@@ -36,12 +21,31 @@ export class Renderer {
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.ctx = canvas.getContext("2d")!;
-    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => (this.colors = palette()));
   }
 
-  /** Convert a screen point (CSS pixels relative to the canvas) to world units. */
-  toWorld(px: number, py: number): Vec2 {
-    return { x: (px - this.cx) / this.scale, y: (py - this.cy) / this.scale };
+  setVisible(visible: boolean): void {
+    this.canvas.hidden = !visible;
+  }
+
+  /** In the top-down view, W is always north. */
+  toWorldInput(input: Vec2): Vec2 {
+    return input;
+  }
+
+  /** Triangle path for a character seen from above, plus the facing edge's front corner. */
+  private tetraPath(x: number, y: number, r: number, facingDeg: number): [number, number] {
+    const { ctx } = this;
+    const corner = (deg: number) => {
+      const d = dirFromDeg(deg);
+      return [x + d.x * r, y + d.y * r] as [number, number];
+    };
+    const f = corner(facingDeg);
+    ctx.beginPath();
+    ctx.moveTo(...f);
+    ctx.lineTo(...corner(facingDeg + 120));
+    ctx.lineTo(...corner(facingDeg + 240));
+    ctx.closePath();
+    return f;
   }
 
   private resize(arenaRadius: number): void {
@@ -150,7 +154,7 @@ export class Renderer {
     }
     ctx.restore();
 
-    // Boss.
+    // Boss: half-transparent triangle facing its attacks; the dashed ring is its hitbox.
     ctx.beginPath();
     ctx.arc(this.cx, this.cy, enc.bossRadius * k, 0, Math.PI * 2);
     ctx.strokeStyle = c.boss;
@@ -158,10 +162,17 @@ export class Renderer {
     ctx.setLineDash([3, 4]);
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.beginPath();
-    ctx.arc(this.cx, this.cy, Math.max(5, 0.9 * k), 0, Math.PI * 2);
+    const bossFront = this.tetraPath(this.cx, this.cy, enc.bossRadius * k, s.bossFacing);
+    ctx.globalAlpha = 0.5;
     ctx.fillStyle = c.boss;
     ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.moveTo(this.cx, this.cy);
+    ctx.lineTo(...bossFront);
+    ctx.strokeStyle = c.ink;
+    ctx.lineWidth = 2;
+    ctx.stroke();
 
     if (this.showGhost) this.drawGhost(s, positions);
 
@@ -179,22 +190,28 @@ export class Renderer {
       const [x, y] = P(pos);
       const me = p.id === s.myId;
       const role = roleOf(p.slot);
-      const r = Math.max(me ? 9 : 7, (me ? 0.8 : 0.65) * k);
-      ctx.globalAlpha = p.isBot ? 0.75 : 1;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
+      const r = Math.max(me ? 11 : 9, (me ? 1.0 : 0.85) * k);
+      ctx.globalAlpha = p.isBot ? 0.8 : 1;
+      const front = this.tetraPath(x, y, r, pos.facing);
       ctx.fillStyle = c[role];
       ctx.fill();
-      if (me) {
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = c.ink;
-        ctx.stroke();
-      } else if (!p.isBot) {
-        ctx.lineWidth = 1.5;
+      if (me || !p.isBot) {
+        ctx.lineWidth = me ? 2.5 : 1.5;
         ctx.strokeStyle = c.ink;
         ctx.stroke();
       }
       ctx.globalAlpha = 1;
+      // Facing edge and the hitbox dot at the tip.
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(...front);
+      ctx.strokeStyle = c.ink;
+      ctx.lineWidth = me ? 2.5 : 1.5;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x, y, me ? 2.5 : 2, 0, Math.PI * 2);
+      ctx.fillStyle = c.ink;
+      ctx.fill();
       ctx.fillStyle = c.ink;
       ctx.font = `${me ? 700 : 600} 11px 'Barlow Semi Condensed', system-ui, sans-serif`;
       ctx.fillText(p.slot, x, y + r + 9);
@@ -212,7 +229,7 @@ export class Renderer {
    * The ghost is a perfect player in your slot: a hollow copy of your marker,
    * a dashed line to where it is heading, and a faint tether from you to it.
    */
-  private drawGhost(s: ClientSession, positions: Map<string, Vec2>): void {
+  private drawGhost(s: ClientSession, positions: Map<string, Placed>): void {
     const g = s.ghost();
     const me = positions.get(s.myId);
     if (!g || !me) return;
@@ -220,7 +237,7 @@ export class Renderer {
     const k = this.scale;
     const P = (p: Vec2): [number, number] => [this.cx + p.x * k, this.cy + p.y * k];
     const roleColor = c[roleOf(s.slot)];
-    const r = Math.max(9, 0.8 * k);
+    const r = Math.max(11, 1.0 * k);
     const [gx, gy] = P(g.pos);
     const [dx, dy] = P(g.dest);
     const [mx, my] = P(me);
@@ -260,9 +277,8 @@ export class Renderer {
       ctx.setLineDash([]);
     }
 
-    // The ghost itself.
-    ctx.beginPath();
-    ctx.arc(gx, gy, r, 0, Math.PI * 2);
+    // The ghost itself: a hollow copy of your marker, facing where it's heading.
+    const gFront = this.tetraPath(gx, gy, r, g.facing);
     ctx.globalAlpha = 0.25;
     ctx.fillStyle = roleColor;
     ctx.fill();
@@ -270,6 +286,10 @@ export class Renderer {
     ctx.strokeStyle = c.ink;
     ctx.lineWidth = 2;
     ctx.setLineDash([4, 3]);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(gx, gy);
+    ctx.lineTo(...gFront);
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.globalAlpha = 1;

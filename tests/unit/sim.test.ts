@@ -143,6 +143,30 @@ describe("simulation", () => {
     expect(sim.players.get("human")!.pos).toEqual(res.positions.human);
   });
 
+  it("bots face the way they move and the boss faces its directional attacks", () => {
+    const sim = new Simulation(enc.def, strat, 4, { difficulty: "perfect", mistakeChance: 0 });
+    run(sim, 3 + 3 + 1); // a second into "Searing Ring": everyone runs outward
+    const mt = sim.players.get("bot:MT")!; // MT runs from 4 to 13 units north
+    expect(mt.facing === 0 || mt.facing > 359).toBe(true);
+    const ot = sim.players.get("bot:OT")!; // OT runs from north toward east
+    expect(ot.facing).toBeGreaterThan(45);
+    expect(ot.facing).toBeLessThan(180);
+    sim.seekTo(40.5); // Frontal Sweep (cone, random cardinal)
+    const cone = [...sim.hazards.values()].find((h) => h.name === "Frontal Sweep")!;
+    const s = cone.shapes[0] as { dir: { x: number; y: number } };
+    expect(dirFromDeg(sim.bossFacing).x).toBeCloseTo(s.dir.x, 5);
+    expect(dirFromDeg(sim.bossFacing).y).toBeCloseTo(s.dir.y, 5);
+  });
+
+  it("takes a human's facing from their position reports", () => {
+    const sim = new Simulation(enc.def, strat, 4, { difficulty: "perfect", mistakeChance: 0 });
+    sim.addHuman("human", "Tester", "MT");
+    sim.applySample({ playerId: "human", tick: 1, pos: sim.players.get("human")!.pos, facing: 270 });
+    expect(sim.players.get("human")!.facing).toBe(270);
+    sim.applySample({ playerId: "human", tick: 2, pos: sim.players.get("human")!.pos, facing: -90 });
+    expect(sim.players.get("human")!.facing).toBe(270);
+  });
+
   it("returns a slot to a bot when a human leaves", () => {
     const sim = new Simulation(enc.def, strat, 5, { difficulty: "perfect", mistakeChance: 0 });
     expect(sim.addHuman("a", "A")).toBe("MT");
