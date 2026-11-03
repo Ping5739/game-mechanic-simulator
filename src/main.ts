@@ -41,6 +41,18 @@ const showSource = () => {
   } else el.append(src.title);
   if (src.author) el.append(` by ${src.author}`);
   el.append(". ");
+  for (const more of chosenEncounter().def.moreSources ?? []) {
+    el.append(more.usedFor ? `${more.usedFor[0].toUpperCase()}${more.usedFor.slice(1)} from ` : "Also uses ");
+    if (more.url) {
+      const a = document.createElement("a");
+      a.href = more.url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.textContent = more.title;
+      el.append(a);
+    } else el.append(more.title);
+    el.append(". ");
+  }
   if (src.caveat) el.append(src.caveat);
 };
 encounterSelect.addEventListener("change", () => {

@@ -20,6 +20,11 @@ const renderedPos = (page: Page, slot: string) =>
     return g.client.renderPositions().get(id)!;
   }, slot);
 
+// These tests are about networking; the 2D view keeps them fast in software-rendered test browsers.
+test.beforeEach(async ({ context }) => {
+  await context.addInitScript(() => localStorage.setItem("gms-view", "2d"));
+});
+
 async function hostRoom(page: Page, query: string, name = "Hosty"): Promise<string> {
   await page.goto(`/?${query}`);
   await page.fill("#name", name);
@@ -59,6 +64,7 @@ for (const mode of [
   test(`two players share a room over ${mode.label}`, async ({ browser }) => {
     const hostCtx = await browser.newContext();
     const joinCtx = mode.sameContext ? hostCtx : await browser.newContext();
+    for (const ctx of new Set([hostCtx, joinCtx])) await ctx.addInitScript(() => localStorage.setItem("gms-view", "2d"));
     const host = await hostCtx.newPage();
     const joiner = await joinCtx.newPage();
 

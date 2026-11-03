@@ -152,6 +152,7 @@ test("the encounter dropdown picks the fight, and guests get the host's choice",
   await expect(host.locator("#encounter option")).toHaveCount(2);
   await host.selectOption("#encounter", "tea-living-liquid");
   await expect(host.locator("#encounter-source")).toContainText("Living Liquid APT");
+  await expect(host.locator("#encounter-source")).toContainText("Lyra's TEA guide");
   await host.click("#create");
   await expect(host.locator("#room-code")).toBeVisible({ timeout: 20_000 });
   const code = (await host.locator("#room-code").textContent())!.trim();
@@ -170,9 +171,9 @@ test("the encounter dropdown picks the fight, and guests get the host's choice",
     await expect(page.locator(".label3d.boss-label")).toHaveCount(2);
   }
 
-  // Jump to the first tornado proteans and check they resolve for the guest.
-  await host.evaluate(() => (window as unknown as { gms: { host: { seek(s: number): void } } }).gms.host.seek(14));
-  await expect(guest.locator("#feed li", { hasText: "Protean Wave (tornado)" }).first()).toBeVisible({ timeout: 10_000 });
+  // Jump to the first tornado proteans (0:32–0:35) and check they resolve for the guest.
+  await host.evaluate(() => (window as unknown as { gms: { host: { seek(s: number): void } } }).gms.host.seek(30));
+  await expect(guest.locator("#feed li", { hasText: "Liquid Rage: Protean Wave" }).first()).toBeVisible({ timeout: 10_000 });
   await expect(guest.locator("#step-label")).toHaveText(/Tornado proteans|Doll spawns/);
 
   await hostCtx.close();

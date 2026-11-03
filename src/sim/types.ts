@@ -73,10 +73,14 @@ export type MechanicDef =
   | { type: "spread"; name: string; radius: number; on?: Slot[] }
   | { type: "stack"; name: string; radius: number; minPlayers: number; on: Anchor }
   /**
-   * Untelegraphed cones from `from` toward the `count` nearest players, decided
-   * when it resolves. A player in a cone aimed at someone else fails.
+   * Cones from `from` toward the `count` nearest players.
+   * Untelegraphed (default): aimed when it resolves; each cone's target takes
+   * it, and anyone in a cone aimed at someone else fails.
+   * Telegraphed: aimed when the cast starts and drawn on the ground; everyone
+   * must be out of every cone when it resolves.
+   * `front`: an extra wave straight ahead of the source actor that nobody may stand in.
    */
-  | { type: "protean"; name: string; from: Anchor; count: number; radius: number; angleDeg: number }
+  | { type: "protean"; name: string; from: Anchor; count: number; radius: number; angleDeg: number; telegraphed?: boolean; front?: boolean }
   /**
    * Untelegraphed circles dropped on the `count` nearest or farthest players
    * from `from` when it resolves. Non-targets inside any circle fail.
@@ -133,6 +137,8 @@ export interface EncounterDef {
   actors?: ActorDef[];
   /** Where the encounter was taken from, shown in the lobby. */
   source?: { title: string; author?: string; url?: string; caveat?: string };
+  /** Further sources (e.g. a timeline), shown after `source`. */
+  moreSources?: { title: string; author?: string; url?: string; usedFor?: string }[];
 }
 
 // ---------------------------------------------------------------------------

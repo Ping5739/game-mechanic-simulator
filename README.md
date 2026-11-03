@@ -108,14 +108,20 @@ Pick one from the **Encounter** menu in the lobby. Guests always get the
 host's choice.
 
 - **Training Dummy** – a short test loop of the basic mechanic types.
-- **TEA: Living Liquid** – built from Elina's
+- **TEA: Living Liquid** – player positions from Elina's
   [Living Liquid APT plan](https://ff14.toolboxgaming.space/?id=725383877116761&preview=1)
-  on Toolbox Gaming: both bosses and their movements, the three tornadoes,
-  dolls and Exhaust, Embolus orbs, both Protean Waves with Sluice, split tank
-  busters, Drainage and the tornado baits. Every player position comes from
-  the plan's 18 steps, and the "Next step" panel shows a short reminder for
-  each one. The plan has no timings, so **timings, AoE sizes and hit rules
-  are approximations**; tightening them needs a real timeline or log.
+  on Toolbox Gaming; cast times and mechanic rules from the Living Liquid
+  timeline in
+  [Lyra's TEA guide](https://docs.google.com/document/d/1wKE4Hj7asv5PsJT4w4mL5chDRMTtgUbdPCsJWqGsuJk/edit)
+  (linked from [Ultimate Uncoiled](https://ultimateuncoiled.com/tea/)).
+  Covers 0:00–2:10: both bosses and their movements, the tornadoes, marked
+  and unmarked tornado and boss Protean Waves (including the wave in front
+  of the boss), dolls and Exhaust, both Embolus sets, Sluice, split tank
+  busters, Drainage, Splash, Cascade, Throttle, Hand of Pain and Hand of
+  Parting. Remaining approximations: AoE sizes (scaled from the plan's
+  drawings), bosses and dolls follow the plan instead of being dragged,
+  HP checks and cleanses are cast bars only, and M1/M2 stand one square
+  further north than the plan at 0:32 so MT is closest to the south tornado.
 
 ## Adding an encounter
 

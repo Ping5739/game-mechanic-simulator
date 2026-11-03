@@ -342,7 +342,8 @@ export class ClientSession {
     if (!this.ready || !this.gotFirstSnap || this.paused) return;
     const l = Math.hypot(input.x, input.y);
     if (l > 0) {
-      const step = Math.min(dtSec, 0.1) * MOVE_SPEED;
+      // Cap long frames (e.g. after a tab switch) but keep slow machines moving at full speed.
+      const step = Math.min(dtSec, 0.25) * MOVE_SPEED;
       this.myPos = clampToArena(
         { x: this.myPos.x + (input.x / l) * step, y: this.myPos.y + (input.y / l) * step },
         this.encounter.arenaRadius,

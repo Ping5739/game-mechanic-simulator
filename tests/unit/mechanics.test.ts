@@ -128,10 +128,36 @@ describe("Living Liquid (APT)", () => {
     }
   });
 
+  it("proteans lock onto the players the plan intends", () => {
+    const sim = new Simulation(e.def, strat, 1, perfect);
+    const slot = (id: string) => sim.players.get(id)?.slot ?? id;
+    const marked: string[] = [];
+    for (let i = 0; i < (e.def.loopLength + 2) * TICK_RATE; i++) {
+      for (const h of sim.step().hazards) if (h.mechType === "protean" && h.targets) marked.push(`${Math.round((h.startTick - 90) / TICK_RATE)}:${h.targets.map(slot).sort().join(",")}`);
+    }
+    // 0:32 tornado baits: caster, ranged, MT. 1:06 / 1:43 boss waves: the north/south bait groups.
+    expect(marked).toEqual(["32:R2", "32:R1", "32:MT", "66:M2,MT,R1,R2", "103:H1,M1,OT,R1", "108:R2", "108:R1", "108:H2"]);
+  });
+
+  it("standing in front of the boss during a Protean Wave fails", () => {
+    const sim = new Simulation(e.def, strat, 1, perfect);
+    sim.addHuman("me", "Me", "H1");
+    const failures: string[] = [];
+    for (let i = 0; i < 80 * TICK_RATE; i++) {
+      const t = sim.loopTime();
+      // From 1:09, stand 3 units straight south of Living Liquid (it faces south for Protean Wave 1).
+      const lq = sim.actorAt("liquid")!.pos;
+      const pos = t > 69 ? { x: lq.x, y: lq.y + 3 } : { ...sim.ghosts.get("me")!.pos };
+      sim.applySample({ playerId: "me", tick: sim.tick + 1, pos, epoch: sim.epoch });
+      for (const r of sim.step().results) failures.push(...r.reasons);
+    }
+    expect(failures.some((f) => f.startsWith("H1 stood in front of the boss"))).toBe(true);
+  });
+
   it("steps are in order and every step tells players what's next", () => {
     expect(strat.steps).toHaveLength(18);
     expect(upcomingStep(strat.steps!, 0)!.label).toBe("Cascade");
-    expect(upcomingStep(strat.steps!, 15)!.label).toBe("Tornado proteans");
+    expect(upcomingStep(strat.steps!, 31)!.label).toBe("Tornado proteans");
     expect(strat.steps!.every((s) => s.note && s.note.length > 10)).toBe(true);
   });
 });

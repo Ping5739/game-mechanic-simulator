@@ -456,7 +456,24 @@ export class Simulation {
         const target = a.player ?? this.rng.pick([...this.players.keys()].sort());
         return { ...base, shapes: [{ kind: "circle", c: { player: target }, r: m.radius }], targets: [target], minPlayers: m.minPlayers };
       }
-      case "protean":
+      case "protean": {
+        if (!m.telegraphed) return { ...base, def: m, hidden: true };
+        // Locked onto the nearest players right now, and drawn for everyone to dodge.
+        const src = this.resolveAnchor(m.from);
+        const half = (m.angleDeg * Math.PI) / 360;
+        const ids = [...this.players.keys()]
+          .sort()
+          .map((id) => ({ id, d: dist(this.players.get(id)!.pos, src.pos) }))
+          .sort((a, b) => a.d - b.d || (a.id < b.id ? -1 : 1))
+          .slice(0, m.count)
+          .map((x) => x.id);
+        const shapes: Shape[] = ids.map((id) => ({ kind: "cone", origin: { ...src.pos }, dir: norm(sub(this.players.get(id)!.pos, src.pos)), r: m.radius, halfAngle: half }));
+        if (m.front && src.actor) {
+          const facing = this.actorAt(src.actor)!.facing;
+          shapes.push({ kind: "cone", origin: { ...src.pos }, dir: dirFromDeg(facing), r: m.radius, halfAngle: half });
+        }
+        return { ...base, def: m, shapes, targets: ids };
+      }
       case "baited":
       case "cleave":
         // Decided when they resolve; nothing to draw before then.
@@ -527,7 +544,7 @@ export class Simulation {
     const result = (shapes?: Shape[]): HitResult => ({ hazardId: h.id, name: h.name, tick: T, failed: [...failed], reasons, shapes });
     const m = h.def;
 
-    if (m?.type === "protean" || m?.type === "baited") {
+    if ((m?.type === "protean" && !m.telegraphed) || m?.type === "baited") {
       const src = this.resolveAnchor(m.from, T).pos;
       const byDist = ids
         .map((id) => ({ id, d: dist(posAt(id) ?? src, src) }))
@@ -539,9 +556,20 @@ export class Simulation {
           ? { kind: "cone", origin: src, dir: norm(sub(p, src)), r: m.radius, halfAngle: (m.angleDeg * Math.PI) / 360 }
           : { kind: "circle", c: { ...p }, r: m.radius };
       });
+      // The wave straight ahead of the boss belongs to nobody: anyone in it fails.
+      let front: Shape | undefined;
+      if (m.type === "protean" && m.front) {
+        const actorId = m.from.kind === "actor" ? m.from.id : m.from.kind === "boss" ? "boss" : undefined;
+        const facing = actorId ? this.actorAt(actorId, T)?.facing : undefined;
+        if (facing !== undefined) front = { kind: "cone", origin: src, dir: dirFromDeg(facing), r: m.radius, halfAngle: (m.angleDeg * Math.PI) / 360 };
+      }
       for (const id of ids) {
         const p = posAt(id);
         if (!p) continue;
+        if (front && inShape(p, front, posAt)) {
+          failed.add(id);
+          reasons.push(`${label(id)} stood in front of the boss during ${h.name}`);
+        }
         shapes.forEach((s, i) => {
           const owner = picked[i];
           if (owner === id) return;
@@ -552,7 +580,7 @@ export class Simulation {
           }
         });
       }
-      return result(shapes);
+      return result(front ? [...shapes, front] : shapes);
     }
 
     if (m?.type === "cleave") {
