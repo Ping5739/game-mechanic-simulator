@@ -102,11 +102,42 @@ publicly:
    `src/net/peerjs-transport.ts`. Without it, players behind strict
    firewalls or some mobile networks can't connect.
 
+## Encounters
+
+Pick one from the **Encounter** menu in the lobby. Guests always get the
+host's choice.
+
+- **Training Dummy** – a short test loop of the basic mechanic types.
+- **TEA: Living Liquid** – built from Elina's
+  [Living Liquid APT plan](https://ff14.toolboxgaming.space/?id=725383877116761&preview=1)
+  on Toolbox Gaming: both bosses and their movements, the three tornadoes,
+  dolls and Exhaust, Embolus orbs, both Protean Waves with Sluice, split tank
+  busters, Drainage and the tornado baits. Every player position comes from
+  the plan's 18 steps, and the "Next step" panel shows a short reminder for
+  each one. The plan has no timings, so **timings, AoE sizes and hit rules
+  are approximations**; tightening them needs a real timeline or log.
+
 ## Adding an encounter
 
-1. Copy `src/data/encounters/training-dummy.json` and edit the timeline.
-2. Copy the strategy file to say where bots stand for each mechanic `key`.
-3. Register both in `src/data/index.ts`.
+An encounter is two JSON files plus a line in `src/data/index.ts`:
+
+- `src/data/encounters/*.json` – arena size, loop length, **actors**
+  (bosses, adds, objects like tornadoes or orbs, each with keyframed
+  movement and visibility) and the **timeline** of casts.
+- `src/data/strategies/*.json` – where each party slot stands. Either
+  per-mechanic spots (`positions`, used by the dummy) or a list of timed
+  **steps** (`steps`, used by Living Liquid): bots and your ghost head for
+  the next step as soon as the previous one has passed, so each step's time
+  should be the moment its mechanic resolves.
+
+Mechanic types: `circle`, `donut`, `line`, `cone`, `spread`, `stack`,
+`protean` (cones at the nearest players), `baited` (circles on the nearest
+or farthest players), `cleave` (tank buster cone), `raidwide`, and `zone`
+(an orb you must never touch). Anchors can point at the boss, a fixed
+point, an actor, a party slot, or a random player.
+
+`scripts/build-living-liquid.py` shows how the Living Liquid files were
+generated from the plan's grid positions.
 
 ## Deployment
 

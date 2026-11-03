@@ -141,3 +141,40 @@ test("guests see the host's pause and can't pause or move", async ({ browser }) 
   await hostCtx.close();
   await joinCtx.close();
 });
+
+test("the encounter dropdown picks the fight, and guests get the host's choice", async ({ browser }) => {
+  const hostCtx = await browser.newContext();
+  const joinCtx = await browser.newContext();
+  const host = await hostCtx.newPage();
+  const guest = await joinCtx.newPage();
+
+  await host.goto(`/?${LOCAL_PEER}`);
+  await expect(host.locator("#encounter option")).toHaveCount(2);
+  await host.selectOption("#encounter", "tea-living-liquid");
+  await expect(host.locator("#encounter-source")).toContainText("Living Liquid APT");
+  await host.click("#create");
+  await expect(host.locator("#room-code")).toBeVisible({ timeout: 20_000 });
+  const code = (await host.locator("#room-code").textContent())!.trim();
+
+  // The guest's own dropdown says Training Dummy; the room's fight wins.
+  await guest.goto(`/?${LOCAL_PEER}`);
+  await guest.selectOption("#encounter", "training-dummy");
+  await guest.fill("#code", code);
+  await guest.click("#join-form button[type=submit]");
+  await expect(guest.locator("#game")).toBeVisible({ timeout: 25_000 });
+
+  for (const page of [host, guest]) {
+    await expect(page.locator(".tl-label", { hasText: "Cascade" }).first()).toBeVisible();
+    await expect(page.locator("#strategy-panel")).toBeVisible();
+    await expect(page.locator("#step-label")).not.toBeEmpty();
+    await expect(page.locator(".label3d.boss-label")).toHaveCount(2);
+  }
+
+  // Jump to the first tornado proteans and check they resolve for the guest.
+  await host.evaluate(() => (window as unknown as { gms: { host: { seek(s: number): void } } }).gms.host.seek(14));
+  await expect(guest.locator("#feed li", { hasText: "Protean Wave (tornado)" }).first()).toBeVisible({ timeout: 10_000 });
+  await expect(guest.locator("#step-label")).toHaveText(/Tornado proteans|Doll spawns/);
+
+  await hostCtx.close();
+  await joinCtx.close();
+});

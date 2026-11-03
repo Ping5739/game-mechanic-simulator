@@ -154,8 +154,8 @@ describe("simulation", () => {
     sim.seekTo(40.5); // Frontal Sweep (cone, random cardinal)
     const cone = [...sim.hazards.values()].find((h) => h.name === "Frontal Sweep")!;
     const s = cone.shapes[0] as { dir: { x: number; y: number } };
-    expect(dirFromDeg(sim.bossFacing).x).toBeCloseTo(s.dir.x, 5);
-    expect(dirFromDeg(sim.bossFacing).y).toBeCloseTo(s.dir.y, 5);
+    expect(dirFromDeg(sim.actorAt("boss")!.facing).x).toBeCloseTo(s.dir.x, 5);
+    expect(dirFromDeg(sim.actorAt("boss")!.facing).y).toBeCloseTo(s.dir.y, 5);
   });
 
   it("takes a human's facing from their position reports", () => {

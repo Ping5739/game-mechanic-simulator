@@ -36,7 +36,7 @@ function postSnap(s: Simulation): void {
     tick: s.tick,
     p: [...s.players.values()].map((p) => [p.id, r2(p.pos.x), r2(p.pos.y), p.fails, Math.round(p.facing)]),
     g: [...s.ghosts].map(([id, g]) => [id, r2(g.pos.x), r2(g.pos.y), r2(g.dest.x), r2(g.dest.y)]),
-    b: Math.round(s.bossFacing),
+    a: s.actorStates().map((a) => [a.id, r2(a.pos.x), r2(a.pos.y), Math.round(a.facing), a.visible ? 1 : 0]),
   });
 }
 

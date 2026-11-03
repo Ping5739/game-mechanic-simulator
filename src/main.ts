@@ -1,6 +1,7 @@
 import "./style.css";
 import { ClientSession, type FeedItem } from "./client/client-session";
 import type { View } from "./client/view";
+import { upcomingStep, type CompiledStep } from "./sim/strategy";
 import { View2D } from "./client/view2d";
 import { TimelineBar } from "./client/timeline";
 import { transportFromUrl } from "./config";
@@ -14,7 +15,43 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getEleme
 
 const params = new URLSearchParams(location.search);
 const transport = transportFromUrl(params);
-const encounter = ENCOUNTERS[DEFAULT_ENCOUNTER_ID];
+// Encounter picker ------------------------------------------------------------
+const encounterSelect = $<HTMLSelectElement>("encounter");
+for (const [id, e] of Object.entries(ENCOUNTERS)) encounterSelect.append(new Option(e.def.name, id));
+try {
+  const saved = localStorage.getItem("gms-encounter");
+  if (saved && ENCOUNTERS[saved]) encounterSelect.value = saved;
+} catch {
+  /* ignore */
+}
+const chosenEncounter = () => ENCOUNTERS[encounterSelect.value] ?? ENCOUNTERS[DEFAULT_ENCOUNTER_ID];
+const showSource = () => {
+  const src = chosenEncounter().def.source;
+  const el = $("encounter-source");
+  el.replaceChildren();
+  if (!src) return;
+  el.append("Based on ");
+  if (src.url) {
+    const a = document.createElement("a");
+    a.href = src.url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.textContent = src.title;
+    el.append(a);
+  } else el.append(src.title);
+  if (src.author) el.append(` by ${src.author}`);
+  el.append(". ");
+  if (src.caveat) el.append(src.caveat);
+};
+encounterSelect.addEventListener("change", () => {
+  try {
+    localStorage.setItem("gms-encounter", encounterSelect.value);
+  } catch {
+    /* ignore */
+  }
+  showSource();
+});
+showSource();
 
 // ----------------------------------------------------------------------------
 // Lobby
@@ -24,7 +61,6 @@ const nameInput = $<HTMLInputElement>("name");
 const codeInput = $<HTMLInputElement>("code");
 const status = $("lobby-status");
 
-$("encounter-name").textContent = encounter.def.name;
 $("transport-name").textContent = transport.name;
 
 try {
@@ -55,8 +91,8 @@ function busy(on: boolean): void {
 
 const hostOpts = () => ({
   name: playerName(),
-  encounterId: encounter.def.id,
-  strategyId: encounter.strategies[0].id,
+  encounterId: chosenEncounter().def.id,
+  strategyId: chosenEncounter().strategies[0].id,
   bots: { ...DEFAULT_BOT_SETTINGS },
 });
 
@@ -241,6 +277,31 @@ function setupGame(client: ClientSession, host: HostSession | null): void {
     $("feed").prepend(li);
   };
 
+  // Strategy steps ----------------------------------------------------------------
+  const steps = client.strategy?.steps;
+  let shownStep: CompiledStep | undefined;
+  const updateStep = () => {
+    if (!steps?.length) return;
+    const step = upcomingStep(steps, client.loopTime());
+    if (step === shownStep) return;
+    shownStep = step;
+    $("step-label").textContent = step ? step.label : "";
+    $("step-note").textContent = step?.note ?? "";
+  };
+  if (steps?.length) {
+    $("strategy-panel").hidden = false;
+    const src = ENCOUNTERS[client.encounter.id].strategies.find((x) => x.id === client.strategy?.id)?.source;
+    const el = $("strategy-source");
+    if (src?.url) {
+      const a = document.createElement("a");
+      a.href = src.url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.textContent = `${src.title}${src.author ? ` by ${src.author}` : ""}`;
+      el.append("Strategy: ", a);
+    }
+  }
+
   // Ghost -----------------------------------------------------------------------
   const ghostToggle = $<HTMLInputElement>("ghost-toggle");
   try {
@@ -414,6 +475,7 @@ function setupGame(client: ClientSession, host: HostSession | null): void {
     client.update(dt, inputDir());
     view.draw(client);
     timeline.update(client.loopTime());
+    updateStep();
     const cast = client.currentCast();
     castbar.hidden = !cast;
     if (cast) {

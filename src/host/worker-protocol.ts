@@ -1,6 +1,6 @@
 import type { BotSettings } from "../sim/bots";
 import type { Hazard, HitResult, Slot } from "../sim/types";
-import type { RosterEntry, SeekInfo, SnapGhost, SnapPlayer } from "../net/protocol";
+import type { RosterEntry, SeekInfo, SnapActor, SnapGhost, SnapPlayer } from "../net/protocol";
 
 /** Messages from the host page to the simulation worker. */
 export type ToWorker =
@@ -18,7 +18,7 @@ export type FromWorker =
   | { type: "pause"; paused: boolean; tick: number }
   | ({ type: "seek" } & SeekInfo)
   | { type: "full"; id: string }
-  | { type: "snap"; tick: number; p: SnapPlayer[]; g: SnapGhost[]; b: number }
+  | { type: "snap"; tick: number; p: SnapPlayer[]; g: SnapGhost[]; a: SnapActor[] }
   | { type: "hazard"; h: Hazard }
   | { type: "result"; r: HitResult }
   | { type: "roster"; roster: RosterEntry[] }

@@ -1,3 +1,4 @@
+import { actorStateAt, actorsOf, lastFacingKeyAt } from "./actors";
 import { BotBrain, type BotSettings } from "./bots";
 import { HISTORY_TICKS, MOVE_SPEED, RESOLVE_GRACE_TICKS, TICK_RATE } from "./constants";
 import { clampToArena, degFromDir, dirFromDeg, dist, inShape, norm, scale, sub, v } from "./math";
@@ -6,11 +7,14 @@ import type { CompiledStrategy } from "./strategy";
 import {
   SLOTS,
   roleOf,
+  type ActorDef,
+  type ActorState,
   type Anchor,
   type EncounterDef,
   type Hazard,
   type HitResult,
   type InputSample,
+  type MechanicDef,
   type PlayerState,
   type Shape,
   type Slot,
@@ -44,6 +48,9 @@ interface HistoryEntry {
   pos: Vec2;
 }
 
+/** Lookup keys for actors share the player id space with this prefix. */
+export const ACTOR_PREFIX = "actor:";
+
 /**
  * Deterministic, authoritative encounter simulation.
  *
@@ -61,16 +68,20 @@ export class Simulation {
   /** Bumped on every seek; position reports from an older epoch are ignored. */
   epoch = 0;
   loopStartTick = 0;
-  /** The boss turns to face its directional attacks (cones, lines). */
-  bossFacing = 0;
+  readonly actorDefs: ActorDef[];
 
+  private readonly actorById = new Map<string, ActorDef>();
+  /** Facing set by a directional attack, which wins over keyframes set earlier. */
+  private readonly facingOverride = new Map<string, { deg: number; tick: number }>();
   private readonly history = new Map<string, HistoryEntry[]>();
   private readonly lastSample = new Map<string, HistoryEntry>();
   private readonly bots = new Map<string, BotBrain>();
+  private readonly zoneTouched = new Map<number, Map<string, string>>();
   private readonly rng: Rng;
   private nextHazardId = 1;
   private timelineIndex = 0;
   private rosterChanged = true;
+  private readonly loopTicks: number;
 
   constructor(
     readonly encounter: EncounterDef,
@@ -82,6 +93,9 @@ export class Simulation {
   ) {
     this.rng = new Rng(seed);
     this.loopStartTick = Math.round(leadInSeconds * TICK_RATE);
+    this.loopTicks = Math.round(encounter.loopLength * TICK_RATE);
+    this.actorDefs = actorsOf(encounter);
+    for (const a of this.actorDefs) this.actorById.set(a.id, a);
     for (const slot of SLOTS) this.spawnBot(slot);
   }
 
@@ -136,6 +150,53 @@ export class Simulation {
   setBotSettings(settings: BotSettings): void {
     this.botSettings = settings;
     for (const b of this.bots.values()) b.settings = settings;
+  }
+
+  /** Who fills a slot right now (bot or human). */
+  occupant(slot: Slot): string | undefined {
+    for (const p of this.players.values()) if (p.slot === slot) return p.id;
+    return undefined;
+  }
+
+  // -------------------------------------------------------------------------
+  // Actors
+  // -------------------------------------------------------------------------
+
+  /** Loop seconds at a tick (handles ticks from just before the loop wrapped). */
+  loopTimeAt(tick: number): number {
+    let t = tick - this.loopStartTick;
+    if (t < 0 && this.loopStartTick - this.loopTicks >= 0 && tick >= this.loopStartTick - this.loopTicks) t += this.loopTicks;
+    return t / TICK_RATE;
+  }
+
+  actorAt(id: string, tick = this.tick): ActorState | undefined {
+    const def = this.actorById.get(id);
+    if (!def) return undefined;
+    const t = this.loopTimeAt(tick);
+    const s = actorStateAt(def, t);
+    const o = this.facingOverride.get(id);
+    if (o && o.tick <= tick && this.loopTimeAt(o.tick) >= lastFacingKeyAt(def, t)) s.facing = o.deg;
+    return s;
+  }
+
+  actorStates(): ActorState[] {
+    return this.actorDefs.map((d) => this.actorAt(d.id)!);
+  }
+
+  /** Position of a player, or of an actor when the id starts with "actor:". */
+  posAt(id: string, tick: number): Vec2 | undefined {
+    if (id.startsWith(ACTOR_PREFIX)) return this.actorAt(id.slice(ACTOR_PREFIX.length), tick)?.pos;
+    return this.positionAt(id, tick);
+  }
+
+  /** Current position of a player or actor. */
+  currentPos(id: string): Vec2 | undefined {
+    if (id.startsWith(ACTOR_PREFIX)) return this.actorAt(id.slice(ACTOR_PREFIX.length))?.pos;
+    return this.players.get(id)?.pos;
+  }
+
+  private faceActor(id: string, deg: number, tick: number): void {
+    if (this.actorById.has(id)) this.facingOverride.set(id, { deg, tick });
   }
 
   // -------------------------------------------------------------------------
@@ -217,6 +278,7 @@ export class Simulation {
       g.pos = this.moveToward(g.pos, g.dest);
     }
 
+    this.checkZones();
     this.resolveDue(events);
 
     if (this.rosterChanged) {
@@ -245,10 +307,11 @@ export class Simulation {
    * strategy says they should be at that moment.
    */
   seekTo(seconds: number): SeekResult {
-    const loopTicks = Math.round(this.encounter.loopLength * TICK_RATE);
-    const t = Math.max(0, Math.min(loopTicks - 1, Math.round(seconds * TICK_RATE)));
+    const t = Math.max(0, Math.min(this.loopTicks - 1, Math.round(seconds * TICK_RATE)));
     this.epoch++;
     this.hazards.clear();
+    this.zoneTouched.clear();
+    this.facingOverride.clear();
     this.loopStartTick = this.tick - t;
 
     const spawned: Hazard[] = [];
@@ -274,7 +337,7 @@ export class Simulation {
     // target's new position rather than where they stood before the jump.
     for (let pass = 0; pass < 2; pass++) {
       for (const p of this.players.values()) {
-        p.pos = perfect.get(p.id)!.decide(this, { ...p, pos: { ...this.strategy.defaults[p.slot] } });
+        p.pos = perfect.get(p.id)!.decide(this, { ...p, pos: { ...this.strategy.defaults[p.slot] } }, true);
       }
     }
     for (const p of this.players.values()) {
@@ -295,9 +358,8 @@ export class Simulation {
 
   private scheduleTimeline(events: StepEvents): void {
     const tl = this.encounter.timeline;
-    const loopTicks = Math.round(this.encounter.loopLength * TICK_RATE);
-    if (this.tick >= this.loopStartTick + loopTicks) {
-      this.loopStartTick += loopTicks;
+    if (this.tick >= this.loopStartTick + this.loopTicks) {
+      this.loopStartTick += this.loopTicks;
       this.timelineIndex = 0;
     }
     while (this.timelineIndex < tl.length) {
@@ -311,12 +373,23 @@ export class Simulation {
     }
   }
 
-  private resolveAnchor(a: Anchor): { pos: Vec2; player?: string } {
+  /** Resolve an anchor to a position (and the player or actor it refers to). */
+  private resolveAnchor(a: Anchor, tick = this.tick): { pos: Vec2; player?: string; actor?: string } {
     switch (a.kind) {
-      case "boss":
-        return { pos: v(0, 0) };
+      case "boss": {
+        const boss = this.actorAt("boss", tick);
+        return { pos: boss ? { ...boss.pos } : v(0, 0), actor: boss ? "boss" : undefined };
+      }
       case "point":
         return { pos: v(a.x, a.y) };
+      case "actor": {
+        const s = this.actorAt(a.id, tick);
+        return { pos: s ? { ...s.pos } : v(0, 0), actor: a.id };
+      }
+      case "slot": {
+        const id = this.occupant(a.slot);
+        return { pos: { ...(id ? this.posAt(id, tick) ?? v(0, 0) : v(0, 0)) }, player: id };
+      }
       case "randomPlayer": {
         const ids = [...this.players.keys()].sort();
         const id = this.rng.pick(ids);
@@ -330,8 +403,8 @@ export class Simulation {
     }
   }
 
-  private spawnHazard(m: EncounterDef["timeline"][number]["mechanic"], key: string | undefined, startTick: number, resolveTick: number): Hazard {
-    const base = { id: this.nextHazardId++, name: m.name, key, mechType: m.type, startTick, resolveTick };
+  private spawnHazard(m: MechanicDef, key: string | undefined, startTick: number, resolveTick: number): Hazard {
+    const base: Hazard = { id: this.nextHazardId++, name: m.name, key, mechType: m.type, startTick, resolveTick, shapes: [] };
     const R = this.encounter.arenaRadius;
     switch (m.type) {
       case "circle": {
@@ -347,10 +420,12 @@ export class Simulation {
               shapes.push({ kind: "circle", c, r: m.radius });
             }
           }
-          return { ...base, shapes };
+          return { ...base, shapes, allowedHits: m.allowedHits };
         }
         const a = this.resolveAnchor(m.at);
-        return { ...base, shapes: [{ kind: "circle", c: a.pos, r: m.radius }] };
+        const follow = m.follow && (a.actor || a.player);
+        const c = follow ? { player: a.actor ? ACTOR_PREFIX + a.actor : a.player! } : a.pos;
+        return { ...base, shapes: [{ kind: "circle", c, r: m.radius }], allowedHits: m.allowedHits };
       }
       case "donut": {
         const a = this.resolveAnchor(m.at);
@@ -360,25 +435,57 @@ export class Simulation {
         const a = this.resolveAnchor(m.toward);
         const dir = norm(a.pos.x === 0 && a.pos.y === 0 ? dirFromDeg(this.rng.int(4) * 90) : a.pos);
         const origin = scale(dir, -m.length / 2);
-        this.bossFacing = degFromDir(dir);
+        this.faceActor("boss", degFromDir(dir), startTick);
         return { ...base, shapes: [{ kind: "rect", origin, dir, length: m.length, width: m.width }], targets: a.player ? [a.player] : undefined };
       }
       case "cone": {
-        const deg = m.facingDeg === "randomCardinal" ? this.rng.int(4) * 90 : m.facingDeg;
-        this.bossFacing = deg;
+        const src = this.resolveAnchor(m.from ?? { kind: "boss" });
+        const deg = m.facingDeg === "randomCardinal" ? this.rng.int(4) * 90 : (m.facingDeg ?? 0);
+        this.faceActor(src.actor ?? "boss", deg, startTick);
         return {
           ...base,
-          shapes: [{ kind: "cone", origin: v(0, 0), dir: dirFromDeg(deg), r: m.radius, halfAngle: (m.angleDeg * Math.PI) / 360 }],
+          shapes: [{ kind: "cone", origin: src.pos, dir: dirFromDeg(deg), r: m.radius, halfAngle: (m.angleDeg * Math.PI) / 360 }],
         };
       }
       case "spread": {
-        const ids = [...this.players.keys()].sort();
+        const ids = m.on ? m.on.map((s) => this.occupant(s)).filter((x): x is string => !!x) : [...this.players.keys()].sort();
         return { ...base, shapes: ids.map((id) => ({ kind: "circle", c: { player: id }, r: m.radius })), targets: ids };
       }
       case "stack": {
         const a = this.resolveAnchor(m.on);
         const target = a.player ?? this.rng.pick([...this.players.keys()].sort());
         return { ...base, shapes: [{ kind: "circle", c: { player: target }, r: m.radius }], targets: [target], minPlayers: m.minPlayers };
+      }
+      case "protean":
+      case "baited":
+      case "cleave":
+        // Decided when they resolve; nothing to draw before then.
+        return { ...base, def: m, hidden: true };
+      case "raidwide":
+        return { ...base, def: m };
+      case "zone": {
+        const a = this.resolveAnchor(m.at);
+        const c = a.actor ? { player: ACTOR_PREFIX + a.actor } : a.player ? { player: a.player } : a.pos;
+        this.zoneTouched.set(base.id, new Map());
+        return { ...base, def: m, shapes: [{ kind: "circle", c, r: m.radius }] };
+      }
+    }
+  }
+
+  /** Persistent zones: anyone touching one while it's active fails it. */
+  private checkZones(): void {
+    for (const h of this.hazards.values()) {
+      if (h.mechType !== "zone" || this.tick < h.startTick || this.tick > h.resolveTick) continue;
+      const shape = h.shapes[0];
+      if (shape.kind === "circle" && "player" in shape.c && shape.c.player.startsWith(ACTOR_PREFIX)) {
+        const actor = this.actorAt(shape.c.player.slice(ACTOR_PREFIX.length));
+        if (!actor?.visible) continue;
+      }
+      const touched = this.zoneTouched.get(h.id)!;
+      const lookup = (id: string) => this.currentPos(id);
+      for (const p of this.players.values()) {
+        if (touched.has(p.id)) continue;
+        if (inShape(p.pos, shape, lookup)) touched.set(p.id, `${p.slot} touched ${h.name}`);
       }
     }
   }
@@ -400,6 +507,7 @@ export class Simulation {
       if (!this.readyToJudge(h.resolveTick)) continue;
       this.hazards.delete(h.id);
       const result = this.judge(h);
+      this.zoneTouched.delete(h.id);
       for (const id of result.failed) {
         const p = this.players.get(id);
         if (p) p.fails++;
@@ -411,11 +519,68 @@ export class Simulation {
   /** Decide who failed a hazard, using everyone's position at its resolve tick. */
   judge(h: Hazard): HitResult {
     const T = h.resolveTick;
-    const posAt = (id: string) => this.positionAt(id, T);
+    const posAt = (id: string) => this.posAt(id, T);
     const ids = [...this.players.keys()].sort();
     const failed = new Set<string>();
     const reasons: string[] = [];
     const label = (id: string) => this.players.get(id)?.slot ?? id;
+    const result = (shapes?: Shape[]): HitResult => ({ hazardId: h.id, name: h.name, tick: T, failed: [...failed], reasons, shapes });
+    const m = h.def;
+
+    if (m?.type === "protean" || m?.type === "baited") {
+      const src = this.resolveAnchor(m.from, T).pos;
+      const byDist = ids
+        .map((id) => ({ id, d: dist(posAt(id) ?? src, src) }))
+        .sort((a, b) => a.d - b.d || (a.id < b.id ? -1 : 1));
+      const picked = (m.type === "baited" && m.pick === "farthest" ? byDist.reverse() : byDist).slice(0, m.count).map((x) => x.id);
+      const shapes: Shape[] = picked.map((id) => {
+        const p = posAt(id)!;
+        return m.type === "protean"
+          ? { kind: "cone", origin: src, dir: norm(sub(p, src)), r: m.radius, halfAngle: (m.angleDeg * Math.PI) / 360 }
+          : { kind: "circle", c: { ...p }, r: m.radius };
+      });
+      for (const id of ids) {
+        const p = posAt(id);
+        if (!p) continue;
+        shapes.forEach((s, i) => {
+          const owner = picked[i];
+          if (owner === id) return;
+          if (m.type === "baited" && picked.includes(id)) return; // baiters may overlap each other
+          if (inShape(p, s, posAt)) {
+            failed.add(id);
+            reasons.push(`${label(id)} was clipped by ${h.name} aimed at ${label(owner)}`);
+          }
+        });
+      }
+      return result(shapes);
+    }
+
+    if (m?.type === "cleave") {
+      const src = this.resolveAnchor(m.from, T);
+      const tgt = this.resolveAnchor(m.target, T);
+      const dir = norm(sub(tgt.pos, src.pos));
+      if (src.actor) this.faceActor(src.actor, degFromDir(dir), T);
+      const shape: Shape = { kind: "cone", origin: src.pos, dir, r: m.radius, halfAngle: (m.angleDeg * Math.PI) / 360 };
+      for (const id of ids) {
+        if (id === tgt.player) continue;
+        const p = posAt(id);
+        if (p && inShape(p, shape, posAt)) {
+          failed.add(id);
+          reasons.push(`${label(id)} was hit by ${h.name} meant for ${tgt.player ? label(tgt.player) : "the tank"}`);
+        }
+      }
+      return result([shape]);
+    }
+
+    if (m?.type === "raidwide") return result();
+
+    if (m?.type === "zone") {
+      for (const [id, why] of this.zoneTouched.get(h.id) ?? []) {
+        failed.add(id);
+        reasons.push(why);
+      }
+      return result();
+    }
 
     if (h.mechType === "spread") {
       for (const target of h.targets ?? []) {
@@ -428,7 +593,7 @@ export class Simulation {
           if (p && dist(p, c) <= r) {
             failed.add(other);
             failed.add(target);
-            reasons.push(`${label(target)}'s spread clipped ${label(other)}`);
+            reasons.push(`${label(target)}'s ${h.name} clipped ${label(other)}`);
           }
         }
       }
@@ -448,16 +613,19 @@ export class Simulation {
         }
       }
     } else {
+      const allowed = h.allowedHits ?? 0;
       for (const id of ids) {
         const p = posAt(id);
-        if (p && h.shapes.some((s) => inShape(p, s, posAt))) {
+        if (!p) continue;
+        const hits = h.shapes.filter((s) => inShape(p, s, posAt)).length;
+        if (hits > allowed) {
           failed.add(id);
-          reasons.push(`${label(id)} was hit by ${h.name}`);
+          reasons.push(allowed ? `${label(id)} was hit by ${hits}× ${h.name}` : `${label(id)} was hit by ${h.name}`);
         }
       }
     }
 
-    return { hazardId: h.id, name: h.name, tick: T, failed: [...failed], reasons };
+    return result();
   }
 
   snapshotPlayers(): PlayerState[] {

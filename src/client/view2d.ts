@@ -154,25 +154,7 @@ export class View2D implements View {
     }
     ctx.restore();
 
-    // Boss: half-transparent triangle facing its attacks; the dashed ring is its hitbox.
-    ctx.beginPath();
-    ctx.arc(this.cx, this.cy, enc.bossRadius * k, 0, Math.PI * 2);
-    ctx.strokeStyle = c.boss;
-    ctx.lineWidth = 2.5;
-    ctx.setLineDash([3, 4]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    const bossFront = this.tetraPath(this.cx, this.cy, enc.bossRadius * k, s.bossFacing);
-    ctx.globalAlpha = 0.5;
-    ctx.fillStyle = c.boss;
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.beginPath();
-    ctx.moveTo(this.cx, this.cy);
-    ctx.lineTo(...bossFront);
-    ctx.strokeStyle = c.ink;
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    this.drawActors(s);
 
     if (this.showGhost) this.drawGhost(s, positions);
 
@@ -221,6 +203,97 @@ export class View2D implements View {
         ctx.strokeStyle = c.fail;
         ctx.lineWidth = 2.5;
         ctx.stroke();
+      }
+    }
+  }
+
+  /**
+   * Bosses: half-transparent triangles facing their attacks, with a dashed
+   * hitbox ring. Adds: small grey triangles. Tornadoes and orbs: discs.
+   */
+  private drawActors(s: ClientSession): void {
+    const { ctx, colors: c } = this;
+    const k = this.scale;
+    const actors = s.renderActors();
+    const bossColors = [c.boss, c.hand];
+    let bossIndex = 0;
+    for (const def of s.actorDefs) {
+      const a = actors.get(def.id);
+      if (!a || !a.visible) {
+        if (def.kind === "boss") bossIndex++;
+        continue;
+      }
+      const x = this.cx + a.x * k;
+      const y = this.cy + a.y * k;
+      const look = def.look ?? "tetra";
+      if (look === "tornado") {
+        ctx.beginPath();
+        ctx.arc(x, y, def.radius * k, 0, Math.PI * 2);
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = c.tornado;
+        ctx.fill();
+        ctx.globalAlpha = 0.9;
+        ctx.strokeStyle = c.tornado;
+        ctx.lineWidth = 2;
+        for (const f of [0.35, 0.65, 0.95]) {
+          ctx.beginPath();
+          ctx.arc(x, y, def.radius * k * f, f * 4, f * 4 + Math.PI * 1.2);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+        continue;
+      }
+      if (look === "orb") {
+        ctx.beginPath();
+        ctx.arc(x, y, Math.max(5, def.radius * k), 0, Math.PI * 2);
+        ctx.fillStyle = c.orb;
+        ctx.fill();
+        ctx.strokeStyle = c.ink;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        continue;
+      }
+      if (def.kind === "boss") {
+        const color = bossColors[bossIndex++ % bossColors.length];
+        ctx.beginPath();
+        ctx.arc(x, y, def.radius * k, 0, Math.PI * 2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([3, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        const front = this.tetraPath(x, y, def.radius * k, a.facing);
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(...front);
+        ctx.strokeStyle = c.ink;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        if (s.actorDefs.filter((d) => d.kind === "boss").length > 1) {
+          ctx.fillStyle = color;
+          ctx.font = "700 12px 'Barlow Semi Condensed', system-ui, sans-serif";
+          // Alternate labels above/below so bosses standing together stay readable.
+          const above = bossIndex % 2 === 1;
+          ctx.fillText(def.name, x, above ? y - def.radius * k - 10 : y + def.radius * k + 14);
+        }
+      } else {
+        const r = Math.max(8, def.radius * k);
+        const front = this.tetraPath(x, y, r, a.facing);
+        ctx.fillStyle = c.add;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(...front);
+        ctx.strokeStyle = c.ink;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.fillStyle = c.add;
+        ctx.font = "700 11px 'Barlow Semi Condensed', system-ui, sans-serif";
+        ctx.fillText(def.name, x, y - r - 8);
       }
     }
   }

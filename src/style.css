@@ -10,6 +10,10 @@
   --muted: #9097b3;
   --line: #343c5e;
   --boss: #a68ef0;
+  --hand: #e58fb8;
+  --add: #b7bccd;
+  --tornado: #a3dafb;
+  --orb: #ff7ad9;
   --aoe: #f2994a;
   --stack: #f2d04a;
   --spread: #d38cff;
@@ -163,6 +167,37 @@ select {
 
 .btn-quiet {
   background: transparent;
+}
+
+.fine.source {
+  margin: -6px 0 16px;
+}
+
+.source a,
+.strategy a {
+  color: var(--muted);
+}
+
+.step-label {
+  margin: 0 0 4px;
+  font-weight: 700;
+  color: var(--aoe);
+}
+
+.step-note {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.label3d.boss-label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.label3d.add-label {
+  color: var(--add);
+  font-weight: 700;
 }
 
 .status {
@@ -433,6 +468,10 @@ kbd {
 
 .k-aoe {
   color: var(--aoe);
+}
+
+.k-raid {
+  color: var(--muted);
 }
 
 .k-stack {

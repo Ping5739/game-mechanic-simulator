@@ -1,0 +1,748 @@
+{
+ "id": "living-liquid-apt",
+ "name": "APT (Elina)",
+ "source": {
+  "title": "Living Liquid APT",
+  "author": "Elina",
+  "url": "https://ff14.toolboxgaming.space/?id=725383877116761&preview=1"
+ },
+ "default": {
+  "MT": {
+   "x": -0.27,
+   "y": -4.0
+  },
+  "OT": {
+   "x": -0.19,
+   "y": 3.28
+  },
+  "H1": {
+   "x": 3.28,
+   "y": 4.48
+  },
+  "H2": {
+   "x": -3.73,
+   "y": 3.95
+  },
+  "M1": {
+   "x": -2.99,
+   "y": 1.47
+  },
+  "M2": {
+   "x": 2.8,
+   "y": 1.2
+  },
+  "R1": {
+   "x": -1.6,
+   "y": 4.8
+  },
+  "R2": {
+   "x": 1.15,
+   "y": 4.93
+  }
+ },
+ "positions": {},
+ "steps": [
+  {
+   "at": 4,
+   "label": "Cascade",
+   "note": "Tornadoes appear west, east and south; the open side counts as north. Stack in the middle.",
+   "positions": {
+    "MT": {
+     "x": -0.27,
+     "y": -4.0
+    },
+    "OT": {
+     "x": -0.19,
+     "y": 3.28
+    },
+    "H1": {
+     "x": 3.28,
+     "y": 4.48
+    },
+    "H2": {
+     "x": -3.73,
+     "y": 3.95
+    },
+    "M1": {
+     "x": -2.99,
+     "y": 1.47
+    },
+    "M2": {
+     "x": 2.8,
+     "y": 1.2
+    },
+    "R1": {
+     "x": -1.6,
+     "y": 4.8
+    },
+    "R2": {
+     "x": 1.15,
+     "y": 4.93
+    }
+   }
+  },
+  {
+   "at": 14,
+   "label": "Split bosses",
+   "note": "MT drags Living Liquid south-west by the south tornado; OT takes the Hand the other way. Caster heads to bait the west tornado, ranged the east one.",
+   "positions": {
+    "MT": {
+     "x": -9.39,
+     "y": 15.95
+    },
+    "OT": {
+     "x": 4.35,
+     "y": -6.13
+    },
+    "H1": {
+     "x": -1.6,
+     "y": -9.73
+    },
+    "H2": {
+     "x": 9.68,
+     "y": 9.33
+    },
+    "M1": {
+     "x": 0.0,
+     "y": -1.79
+    },
+    "M2": {
+     "x": 1.95,
+     "y": -0.05
+    },
+    "R1": {
+     "x": 13.55,
+     "y": -9.33
+    },
+    "R2": {
+     "x": -12.4,
+     "y": -8.8
+    }
+   }
+  },
+  {
+   "at": 20,
+   "label": "Tornado proteans",
+   "note": "MT takes the Hand (with a cooldown); OT stays to the side of the cleave. MT, ranged and caster each bait one tornado's protean.",
+   "positions": {
+    "MT": {
+     "x": -10.67,
+     "y": 14.35
+    },
+    "OT": {
+     "x": -11.73,
+     "y": 11.47
+    },
+    "H1": {
+     "x": -1.6,
+     "y": -9.73
+    },
+    "H2": {
+     "x": 9.68,
+     "y": 9.33
+    },
+    "M1": {
+     "x": -6.53,
+     "y": 7.15
+    },
+    "M2": {
+     "x": -3.73,
+     "y": 7.01
+    },
+    "R1": {
+     "x": 11.28,
+     "y": -8.53
+    },
+    "R2": {
+     "x": -11.79,
+     "y": -8.53
+    }
+   }
+  },
+  {
+   "at": 30,
+   "label": "Doll spawns",
+   "note": "Dolls appear just counter-clockwise of each cardinal. Stand on your doll so you're never in two Exhausts.",
+   "positions": {
+    "MT": {
+     "x": -8.85,
+     "y": 16.35
+    },
+    "OT": {
+     "x": -11.73,
+     "y": 11.47
+    },
+    "H1": {
+     "x": -4.32,
+     "y": -8.4
+    },
+    "H2": {
+     "x": 9.68,
+     "y": 9.33
+    },
+    "M1": {
+     "x": -4.99,
+     "y": 1.73
+    },
+    "M2": {
+     "x": 3.81,
+     "y": 4.85
+    },
+    "R1": {
+     "x": 13.2,
+     "y": -8.8
+    },
+    "R2": {
+     "x": -14.53,
+     "y": -8.75
+    }
+   }
+  },
+  {
+   "at": 40,
+   "label": "First feeds",
+   "note": "Melee feed their dolls to Living Liquid. Orbs (Embolus) appear from the side tornadoes: don't touch them. Ranged drag dolls out and come in for heals.",
+   "positions": {
+    "MT": {
+     "x": -1.79,
+     "y": 2.4
+    },
+    "OT": {
+     "x": -2.85,
+     "y": 1.33
+    },
+    "H1": {
+     "x": 0.08,
+     "y": 0.0
+    },
+    "H2": {
+     "x": 0.0,
+     "y": -2.05
+    },
+    "M1": {
+     "x": -8.19,
+     "y": 6.27
+    },
+    "M2": {
+     "x": -5.65,
+     "y": 7.81
+    },
+    "R1": {
+     "x": 7.55,
+     "y": -5.79
+    },
+    "R2": {
+     "x": -6.67,
+     "y": -6.32
+    }
+   }
+  },
+  {
+   "at": 50,
+   "label": "Bosses center + split tank busters",
+   "note": "Bosses meet in the middle. MT points Living Liquid south-east, OT points the Hand south-west; everyone else stays out of both cleaves.",
+   "positions": {
+    "MT": {
+     "x": 2.08,
+     "y": 1.52
+    },
+    "OT": {
+     "x": -2.05,
+     "y": 1.6
+    },
+    "H1": {
+     "x": -1.87,
+     "y": -6.93
+    },
+    "H2": {
+     "x": 1.15,
+     "y": -6.27
+    },
+    "M1": {
+     "x": -1.39,
+     "y": -3.25
+    },
+    "M2": {
+     "x": 1.01,
+     "y": -3.47
+    },
+    "R1": {
+     "x": 7.55,
+     "y": -5.79
+    },
+    "R2": {
+     "x": -6.67,
+     "y": -6.32
+    }
+   }
+  },
+  {
+   "at": 58,
+   "label": "Last feeds",
+   "note": "Ranged and caster feed the last two dolls. Then line up: tanks south, everyone else north.",
+   "positions": {
+    "MT": {
+     "x": 2.08,
+     "y": 1.52
+    },
+    "OT": {
+     "x": -2.05,
+     "y": 1.6
+    },
+    "H1": {
+     "x": -1.87,
+     "y": -6.93
+    },
+    "H2": {
+     "x": 1.15,
+     "y": -6.27
+    },
+    "M1": {
+     "x": -1.39,
+     "y": -3.25
+    },
+    "M2": {
+     "x": 1.01,
+     "y": -3.47
+    },
+    "R1": {
+     "x": -2.53,
+     "y": -1.73
+    },
+    "R2": {
+     "x": 1.81,
+     "y": -1.25
+    }
+   }
+  },
+  {
+   "at": 63,
+   "label": "Protean Wave 1: bait north/south",
+   "note": "Everyone bunches north of the boss, tanks south, so the telegraphed waves go north and south. Then step out of the lines.",
+   "positions": {
+    "MT": {
+     "x": -0.05,
+     "y": 2.35
+    },
+    "OT": {
+     "x": -0.13,
+     "y": 4.19
+    },
+    "H1": {
+     "x": 0.48,
+     "y": -3.52
+    },
+    "H2": {
+     "x": 0.67,
+     "y": -3.39
+    },
+    "M1": {
+     "x": 0.13,
+     "y": -3.25
+    },
+    "M2": {
+     "x": 0.21,
+     "y": -2.93
+    },
+    "R1": {
+     "x": -0.53,
+     "y": -2.13
+    },
+    "R2": {
+     "x": 0.21,
+     "y": -1.73
+    }
+   }
+  },
+  {
+   "at": 67,
+   "label": "Protean Wave 1: melee take it",
+   "note": "Tanks and melee stay close to take the follow-up waves; ranged and healers spread out in pairs to bait Sluice.",
+   "positions": {
+    "MT": {
+     "x": 2.48,
+     "y": 2.35
+    },
+    "OT": {
+     "x": -2.4,
+     "y": 2.19
+    },
+    "H1": {
+     "x": -4.99,
+     "y": -8.0
+    },
+    "H2": {
+     "x": 5.2,
+     "y": -7.25
+    },
+    "M1": {
+     "x": -2.8,
+     "y": -0.59
+    },
+    "M2": {
+     "x": 3.07,
+     "y": -0.27
+    },
+    "R1": {
+     "x": 6.61,
+     "y": -5.92
+    },
+    "R2": {
+     "x": -5.2,
+     "y": -6.53
+    }
+   }
+  },
+  {
+   "at": 70,
+   "label": "Protean Wave 1: ranged take it",
+   "note": "Melee back out to max melee; ranged and healers come in close to take the next waves.",
+   "positions": {
+    "MT": {
+     "x": 3.52,
+     "y": 3.73
+    },
+    "OT": {
+     "x": -3.65,
+     "y": 3.73
+    },
+    "H1": {
+     "x": -2.4,
+     "y": -3.25
+    },
+    "H2": {
+     "x": 2.85,
+     "y": -3.12
+    },
+    "M1": {
+     "x": -4.45,
+     "y": 4.67
+    },
+    "M2": {
+     "x": 4.53,
+     "y": 5.15
+    },
+    "R1": {
+     "x": 3.73,
+     "y": -0.45
+    },
+    "R2": {
+     "x": -3.6,
+     "y": -0.45
+    }
+   }
+  },
+  {
+   "at": 78,
+   "label": "Splash + Drainage",
+   "note": "Melee go north so they don't steal the tanks' tethers. Tanks stand apart so their Drainage circles don't overlap.",
+   "positions": {
+    "MT": {
+     "x": 4.13,
+     "y": 3.73
+    },
+    "OT": {
+     "x": -4.0,
+     "y": 3.81
+    },
+    "H1": {
+     "x": -0.85,
+     "y": -4.93
+    },
+    "H2": {
+     "x": 1.28,
+     "y": -4.13
+    },
+    "M1": {
+     "x": -2.13,
+     "y": -4.4
+    },
+    "M2": {
+     "x": 1.95,
+     "y": -4.19
+    },
+    "R1": {
+     "x": 1.52,
+     "y": -5.92
+    },
+    "R2": {
+     "x": -0.05,
+     "y": -5.39
+    }
+   }
+  },
+  {
+   "at": 86,
+   "label": "Cascade 2",
+   "note": "Tornadoes vanish during the cast. Shield up and be ready for the new north.",
+   "positions": {
+    "MT": {
+     "x": 1.47,
+     "y": 2.93
+    },
+    "OT": {
+     "x": -0.85,
+     "y": 3.28
+    },
+    "H1": {
+     "x": -0.85,
+     "y": -4.93
+    },
+    "H2": {
+     "x": 1.28,
+     "y": -4.13
+    },
+    "M1": {
+     "x": -2.13,
+     "y": -4.4
+    },
+    "M2": {
+     "x": 1.95,
+     "y": -4.19
+    },
+    "R1": {
+     "x": 1.52,
+     "y": -5.92
+    },
+    "R2": {
+     "x": -0.05,
+     "y": -5.39
+    }
+   }
+  },
+  {
+   "at": 94,
+   "label": "Tornadoes return + cleanses",
+   "note": "Six players get a debuff to cleanse. Line up for Protean Wave 2: tanks, regen healer and caster north, everyone else south.",
+   "positions": {
+    "MT": {
+     "x": -0.27,
+     "y": -6.85
+    },
+    "OT": {
+     "x": 0.0,
+     "y": -4.0
+    },
+    "H1": {
+     "x": -0.19,
+     "y": -4.99
+    },
+    "H2": {
+     "x": 0.08,
+     "y": 5.87
+    },
+    "M1": {
+     "x": -0.4,
+     "y": 1.6
+    },
+    "M2": {
+     "x": 0.08,
+     "y": 7.47
+    },
+    "R1": {
+     "x": -0.13,
+     "y": 4.8
+    },
+    "R2": {
+     "x": -0.13,
+     "y": -8.53
+    }
+   }
+  },
+  {
+   "at": 99,
+   "label": "Protean Wave 2: dodge north/south",
+   "note": "Step out of the north and south lines.",
+   "positions": {
+    "MT": {
+     "x": 2.4,
+     "y": -3.6
+    },
+    "OT": {
+     "x": -3.25,
+     "y": -0.32
+    },
+    "H1": {
+     "x": -10.05,
+     "y": -9.87
+    },
+    "H2": {
+     "x": -9.2,
+     "y": 13.2
+    },
+    "M1": {
+     "x": -1.73,
+     "y": 3.15
+    },
+    "M2": {
+     "x": 3.15,
+     "y": -0.19
+    },
+    "R1": {
+     "x": 11.87,
+     "y": 7.81
+    },
+    "R2": {
+     "x": -11.25,
+     "y": -8.27
+    }
+   }
+  },
+  {
+   "at": 102,
+   "label": "Protean Wave 2: melee take it",
+   "note": "M1 steps back in on the south side; melee take the waves while ranged bait Sluice at the edges.",
+   "positions": {
+    "MT": {
+     "x": 2.4,
+     "y": -3.6
+    },
+    "OT": {
+     "x": -3.25,
+     "y": -0.32
+    },
+    "H1": {
+     "x": -10.05,
+     "y": -9.87
+    },
+    "H2": {
+     "x": -9.2,
+     "y": 13.2
+    },
+    "M1": {
+     "x": -0.05,
+     "y": 3.28
+    },
+    "M2": {
+     "x": 3.15,
+     "y": -0.19
+    },
+    "R1": {
+     "x": 11.87,
+     "y": 7.81
+    },
+    "R2": {
+     "x": -11.25,
+     "y": -8.27
+    }
+   }
+  },
+  {
+   "at": 105,
+   "label": "Protean Wave 2: ranged take it",
+   "note": "Ranged and healers come in; OT, M1 and M2 start heading for the tornadoes.",
+   "positions": {
+    "MT": {
+     "x": 5.01,
+     "y": -5.6
+    },
+    "OT": {
+     "x": -7.73,
+     "y": 5.28
+    },
+    "H1": {
+     "x": -2.0,
+     "y": -3.25
+    },
+    "H2": {
+     "x": 0.21,
+     "y": 2.35
+    },
+    "M1": {
+     "x": 6.19,
+     "y": 5.95
+    },
+    "M2": {
+     "x": 4.13,
+     "y": -4.4
+    },
+    "R1": {
+     "x": 3.2,
+     "y": -0.32
+    },
+    "R2": {
+     "x": -3.33,
+     "y": -0.67
+    }
+   }
+  },
+  {
+   "at": 112,
+   "label": "Melee bait tornadoes",
+   "note": "OT, M1 and M2 each bait one tornado. MT pulls Living Liquid north-east, away from the Hand.",
+   "positions": {
+    "MT": {
+     "x": 6.27,
+     "y": -6.75
+    },
+    "OT": {
+     "x": -12.93,
+     "y": 8.67
+    },
+    "H1": {
+     "x": -2.0,
+     "y": -3.25
+    },
+    "H2": {
+     "x": 0.21,
+     "y": 2.35
+    },
+    "M1": {
+     "x": 9.55,
+     "y": 12.0
+    },
+    "M2": {
+     "x": 10.21,
+     "y": -7.6
+    },
+    "R1": {
+     "x": 3.2,
+     "y": -0.32
+    },
+    "R2": {
+     "x": -3.33,
+     "y": -0.67
+    }
+   }
+  },
+  {
+   "at": 122,
+   "label": "Hand of Parting",
+   "note": "Bring the bosses back together. Watch for orbs.",
+   "positions": {
+    "MT": {
+     "x": 6.27,
+     "y": -6.75
+    },
+    "OT": {
+     "x": 5.2,
+     "y": -7.65
+    },
+    "H1": {
+     "x": -2.0,
+     "y": -3.25
+    },
+    "H2": {
+     "x": 0.21,
+     "y": 2.35
+    },
+    "M1": {
+     "x": 3.01,
+     "y": -2.13
+    },
+    "M2": {
+     "x": 4.75,
+     "y": -3.39
+    },
+    "R1": {
+     "x": 2.67,
+     "y": 0.88
+    },
+    "R2": {
+     "x": -3.33,
+     "y": -0.67
+    }
+   }
+  }
+ ]
+}

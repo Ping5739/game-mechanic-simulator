@@ -10,6 +10,7 @@ const PREP_SECONDS = 2;
 
 function kindClass(e: TimelineEntry): string {
   const t = e.mechanic.type;
+  if (t === "raidwide") return "k-raid";
   return t === "stack" ? "k-stack" : t === "spread" ? "k-spread" : "k-aoe";
 }
 
@@ -47,8 +48,12 @@ export class TimelineBar {
     track.setAttribute("aria-valuemin", "0");
     track.setAttribute("aria-valuemax", String(this.loop));
 
-    enc.timeline.forEach((entry, i) => {
-      const next = enc.timeline[i + 1]?.at ?? this.loop;
+    // Labels for the major casts; minor ones (repeats, extra hits) only get a block.
+    const major = enc.timeline.filter((e) => !e.minor);
+    // Lingering hazards (orbs) would cover the whole bar, so they're left off.
+    enc.timeline.filter((e) => e.mechanic.type !== "zone").forEach((entry) => {
+      const mi = major.indexOf(entry);
+      const next = mi >= 0 ? (major[mi + 1]?.at ?? this.loop) : entry.at;
       const label = document.createElement("button");
       label.type = "button";
       label.className = `tl-label ${kindClass(entry)}`;
@@ -59,7 +64,7 @@ export class TimelineBar {
         ? `${entry.mechanic.name} at ${fmt(entry.at)}. Click to jump to ${PREP_SECONDS} s before it.`
         : `${entry.mechanic.name} at ${fmt(entry.at)}`;
       label.addEventListener("click", () => this.request(Math.max(0, entry.at - PREP_SECONDS)));
-      labels.append(label);
+      if (mi >= 0) labels.append(label);
 
       const block = document.createElement("div");
       block.className = `tl-block ${kindClass(entry)}`;

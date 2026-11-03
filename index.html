@@ -17,6 +17,12 @@
         <p class="lede">Rehearse a fight's mechanics alone with bots, or with your group in a shared room.</p>
 
         <label class="field">
+          <span>Encounter</span>
+          <select id="encounter"></select>
+        </label>
+        <p id="encounter-source" class="fine source"></p>
+
+        <label class="field">
           <span>Your name</span>
           <input id="name" maxlength="24" autocomplete="nickname" placeholder="e.g. Ping" />
         </label>
@@ -35,7 +41,7 @@
         </form>
 
         <p id="lobby-status" class="status" role="status" aria-live="polite"></p>
-        <p class="fine">Encounter: <span id="encounter-name"></span>. Matchmaking: <span id="transport-name"></span>.</p>
+        <p class="fine">Joining a room uses the host's encounter. Matchmaking: <span id="transport-name"></span>.</p>
       </div>
     </main>
 
@@ -71,6 +77,13 @@
           <button id="room-code" class="room-code" title="Copy invite link"></button>
           <span id="room-hint" class="room-hint">Click the code to copy an invite link</span>
         </div>
+
+        <section id="strategy-panel" class="panel strategy" hidden>
+          <h2>Next step</h2>
+          <p id="step-label" class="step-label"></p>
+          <p id="step-note" class="step-note"></p>
+          <p id="strategy-source" class="fine"></p>
+        </section>
 
         <section class="panel">
           <h2>Party</h2>

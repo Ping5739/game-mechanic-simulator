@@ -175,7 +175,7 @@ export class HostSession {
         break;
       }
       case "snap":
-        this.broadcast({ t: "snap", tick: m.tick, p: m.p, g: m.g, b: m.b });
+        this.broadcast({ t: "snap", tick: m.tick, p: m.p, g: m.g, a: m.a });
         break;
       case "pause":
         this.paused = m.paused;

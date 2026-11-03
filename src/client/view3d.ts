@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { CSS2DObject, CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
 import { dirFromDeg } from "../sim/math";
-import { roleOf, type EncounterDef, type Shape, type Vec2 } from "../sim/types";
+import { roleOf, type ActorDef, type EncounterDef, type Shape, type Vec2 } from "../sim/types";
 import type { ClientSession, Placed, TrackedHazard } from "./client-session";
 import { RESOLVE_FLASH_TICKS, cssPalette, type Palette, type View } from "./view";
 
@@ -139,7 +139,7 @@ export class View3D implements View {
 
   private readonly players = new Map<string, PlayerObj>();
   private readonly hazards = new Map<number, HazardObj>();
-  private boss?: THREE.Group;
+  private readonly actors = new Map<string, THREE.Group>();
   private ghost?: {
     group: THREE.Group;
     route: THREE.Line;
@@ -312,28 +312,86 @@ export class View3D implements View {
       this.scene.add(o);
     }
 
-    // Boss: a larger, half-transparent inverted tetrahedron. Its hitbox is the
-    // dashed ring on the ground (not the tip), as before.
-    const boss = new THREE.Group();
-    const bossH = enc.bossRadius * 1.6;
-    const body = new THREE.Mesh(
-      invertedTetra(enc.bossRadius, bossH),
-      new THREE.MeshStandardMaterial({ color: c.boss, transparent: true, opacity: 0.5, flatShading: true, depthWrite: false }),
-    );
-    boss.add(body);
-    boss.add(facingEdge(enc.bossRadius, bossH, 0.08, c.ink));
-    const ringPts = Array.from({ length: 97 }, (_, i) => {
-      const a = (i / 96) * Math.PI * 2;
-      return new THREE.Vector3(Math.cos(a) * enc.bossRadius, 0.04, Math.sin(a) * enc.bossRadius);
-    });
-    const hitRing = new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints(ringPts),
-      new THREE.LineDashedMaterial({ color: c.boss, dashSize: 0.5, gapSize: 0.35 }),
-    );
-    hitRing.computeLineDistances();
-    this.scene.add(hitRing);
-    this.scene.add(boss);
-    this.boss = boss;
+  }
+
+  /**
+   * Bosses: larger half-transparent inverted tetrahedra; their hitbox is the
+   * dashed ring on the ground. Adds: small grey tetrahedra. Tornadoes: a
+   * spinning translucent column. Orbs: glowing spheres.
+   */
+  private buildActors(defs: ActorDef[]): void {
+    const c = this.colors;
+    const bossColors = [c.boss, c.hand];
+    let bossIndex = 0;
+    const multipleBosses = defs.filter((d) => d.kind === "boss").length > 1;
+    const label = (text: string, y: number, cls: string) => {
+      const el = document.createElement("div");
+      el.className = `label3d ${cls}`;
+      el.textContent = text;
+      const o = new CSS2DObject(el);
+      o.position.set(0, y, 0);
+      return o;
+    };
+    for (const def of defs) {
+      const group = new THREE.Group();
+      const look = def.look ?? "tetra";
+      group.userData.turns = look === "tetra";
+      if (look === "tornado") {
+        const col = new THREE.Mesh(
+          new THREE.CylinderGeometry(def.radius * 0.6, def.radius * 0.9, 4, 24, 1, true),
+          new THREE.MeshStandardMaterial({ color: c.tornado, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false }),
+        );
+        col.position.y = 2;
+        const swirl = new THREE.Mesh(
+          new THREE.TorusGeometry(def.radius * 0.8, 0.08, 6, 32, Math.PI * 1.3).rotateX(Math.PI / 2),
+          new THREE.MeshBasicMaterial({ color: c.tornado }),
+        );
+        swirl.position.y = 1.2;
+        const disc = new THREE.Mesh(
+          new THREE.CircleGeometry(def.radius, 40).rotateX(-Math.PI / 2),
+          new THREE.MeshBasicMaterial({ color: c.tornado, transparent: true, opacity: 0.25, depthWrite: false }),
+        );
+        disc.position.y = 0.015;
+        group.add(col, swirl, disc);
+      } else if (look === "orb") {
+        const orb = new THREE.Mesh(
+          new THREE.SphereGeometry(def.radius, 20, 14),
+          new THREE.MeshStandardMaterial({ color: c.orb, emissive: c.orb, emissiveIntensity: 0.6 }),
+        );
+        orb.position.y = def.radius + 0.3;
+        group.add(orb);
+      } else if (def.kind === "boss") {
+        const color = bossColors[bossIndex++ % bossColors.length];
+        const h = def.radius * 1.6;
+        group.add(
+          new THREE.Mesh(
+            invertedTetra(def.radius, h),
+            new THREE.MeshStandardMaterial({ color, transparent: true, opacity: 0.5, flatShading: true, depthWrite: false }),
+          ),
+        );
+        group.add(facingEdge(def.radius, h, 0.08, c.ink));
+        const ringPts = Array.from({ length: 97 }, (_, i) => {
+          const a = (i / 96) * Math.PI * 2;
+          return new THREE.Vector3(Math.cos(a) * def.radius, 0.04, Math.sin(a) * def.radius);
+        });
+        const ring = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(ringPts),
+          new THREE.LineDashedMaterial({ color, dashSize: 0.5, gapSize: 0.35 }),
+        );
+        ring.computeLineDistances();
+        group.add(ring);
+        if (multipleBosses) group.add(label(def.name, h + 0.8, "boss-label"));
+      } else {
+        const r = Math.max(0.6, def.radius);
+        group.add(
+          new THREE.Mesh(invertedTetra(r, r * 2), new THREE.MeshStandardMaterial({ color: c.add, flatShading: true })),
+          facingEdge(r, r * 2, 0.04, c.ink),
+          label(def.name, r * 2 + 0.5, "add-label"),
+        );
+      }
+      this.scene.add(group);
+      this.actors.set(def.id, group);
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -342,14 +400,24 @@ export class View3D implements View {
 
   draw(s: ClientSession): void {
     if (!s.ready) return;
-    if (this.built !== s.encounter) this.buildArena(s.encounter);
+    if (this.built !== s.encounter) {
+      this.buildArena(s.encounter);
+      this.buildActors(s.actorDefs);
+    }
     this.resize();
 
     const positions = s.renderPositions();
     const lookup = (id: string) => positions.get(id);
     const tick = s.hostTick();
 
-    if (this.boss) this.boss.rotation.y = (-s.bossFacing * Math.PI) / 180;
+    for (const [id, a] of s.renderActors()) {
+      const obj = this.actors.get(id);
+      if (!obj) continue;
+      obj.visible = a.visible;
+      obj.position.set(a.x, 0, a.y);
+      if (obj.userData.turns) obj.rotation.y = (-a.facing * Math.PI) / 180;
+      else obj.rotation.y += 0.03; // tornadoes spin
+    }
     this.syncHazards(s, tick, lookup);
     this.syncPlayers(s, positions, tick);
     this.syncGhost(s, positions);
@@ -450,6 +518,11 @@ export class View3D implements View {
     for (const h of s.hazards.values() as Iterable<TrackedHazard>) {
       if (tick < h.startTick || tick > h.resolveTick + RESOLVE_FLASH_TICKS) continue;
       let obj = this.hazards.get(h.id);
+      if (obj && obj.fills.length !== h.shapes.length) {
+        this.disposeHazard(obj);
+        this.hazards.delete(h.id);
+        obj = undefined;
+      }
       const base = h.mechType === "stack" ? c.stack : h.mechType === "spread" ? c.spread : c.aoe;
       if (!obj) {
         obj = this.makeHazard(h, base);

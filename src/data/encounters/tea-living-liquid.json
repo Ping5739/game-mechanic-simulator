@@ -1,0 +1,973 @@
+{
+ "id": "tea-living-liquid",
+ "name": "TEA: Living Liquid",
+ "arenaRadius": 20,
+ "bossRadius": 4.13,
+ "loopLength": 128,
+ "source": {
+  "title": "Living Liquid APT",
+  "author": "Elina",
+  "url": "https://ff14.toolboxgaming.space/?id=725383877116761&preview=1",
+  "caveat": "Positions follow the strategy plan; timings, AoE sizes and hit rules are approximate."
+ },
+ "actors": [
+  {
+   "id": "liquid",
+   "name": "Living Liquid",
+   "kind": "boss",
+   "radius": 4.13,
+   "keys": [
+    {
+     "at": 0,
+     "x": -0.27,
+     "y": -0.45,
+     "facing": 180
+    },
+    {
+     "at": 13,
+     "x": -8.4,
+     "y": 12.35,
+     "move": 7
+    },
+    {
+     "at": 39,
+     "x": -4.53,
+     "y": 5.47,
+     "move": 5
+    },
+    {
+     "at": 48,
+     "x": 0.21,
+     "y": -0.13,
+     "move": 4,
+     "facing": 135
+    },
+    {
+     "at": 60,
+     "facing": 0
+    },
+    {
+     "at": 92,
+     "facing": 180
+    },
+    {
+     "at": 111,
+     "x": 3.87,
+     "y": -4.72,
+     "move": 5,
+     "facing": 45
+    }
+   ]
+  },
+  {
+   "id": "hand",
+   "name": "Liquid Hand",
+   "kind": "boss",
+   "radius": 2.61,
+   "keys": [
+    {
+     "at": 0,
+     "x": -0.27,
+     "y": 1.01,
+     "facing": 0
+    },
+    {
+     "at": 13,
+     "x": 3.07,
+     "y": -4.05,
+     "move": 7
+    },
+    {
+     "at": 18,
+     "x": -7.73,
+     "y": 10.93,
+     "move": 4,
+     "facing": 204
+    },
+    {
+     "at": 39,
+     "x": -4.67,
+     "y": 5.73,
+     "move": 5
+    },
+    {
+     "at": 48,
+     "x": -0.19,
+     "y": -0.32,
+     "move": 4,
+     "facing": 225
+    },
+    {
+     "at": 111,
+     "x": -9.52,
+     "y": 7.28,
+     "move": 5,
+     "facing": 235
+    },
+    {
+     "at": 120,
+     "x": 1.68,
+     "y": -3.47,
+     "move": 6,
+     "facing": 58
+    }
+   ]
+  },
+  {
+   "id": "rage-w",
+   "name": "Liquid Rage (W)",
+   "kind": "object",
+   "look": "tornado",
+   "radius": 3.2,
+   "keys": [
+    {
+     "at": 0,
+     "x": -14.99,
+     "y": -0.16
+    },
+    {
+     "at": 0,
+     "visible": false
+    },
+    {
+     "at": 4,
+     "visible": true
+    },
+    {
+     "at": 82,
+     "visible": false
+    },
+    {
+     "at": 92,
+     "visible": true
+    }
+   ]
+  },
+  {
+   "id": "rage-e",
+   "name": "Liquid Rage (E)",
+   "kind": "object",
+   "look": "tornado",
+   "radius": 3.2,
+   "keys": [
+    {
+     "at": 0,
+     "x": 14.64,
+     "y": -0.48
+    },
+    {
+     "at": 0,
+     "visible": false
+    },
+    {
+     "at": 4,
+     "visible": true
+    },
+    {
+     "at": 82,
+     "visible": false
+    },
+    {
+     "at": 92,
+     "visible": true
+    }
+   ]
+  },
+  {
+   "id": "rage-s",
+   "name": "Liquid Rage (S)",
+   "kind": "object",
+   "look": "tornado",
+   "radius": 3.2,
+   "keys": [
+    {
+     "at": 0,
+     "x": -0.03,
+     "y": 14.88
+    },
+    {
+     "at": 0,
+     "visible": false
+    },
+    {
+     "at": 4,
+     "visible": true
+    },
+    {
+     "at": 82,
+     "visible": false
+    },
+    {
+     "at": 92,
+     "visible": true
+    }
+   ]
+  },
+  {
+   "id": "doll1",
+   "name": "D1",
+   "kind": "add",
+   "radius": 1.33,
+   "keys": [
+    {
+     "at": 0,
+     "visible": false,
+     "x": -6.32,
+     "y": 0.35
+    },
+    {
+     "at": 26,
+     "visible": true
+    },
+    {
+     "at": 39,
+     "x": -7.25,
+     "y": 2.27,
+     "move": 5
+    },
+    {
+     "at": 46,
+     "visible": false
+    }
+   ]
+  },
+  {
+   "id": "doll2",
+   "name": "D2",
+   "kind": "add",
+   "radius": 1.33,
+   "keys": [
+    {
+     "at": 0,
+     "visible": false,
+     "x": 0.67,
+     "y": 3.41
+    },
+    {
+     "at": 26,
+     "visible": true
+    },
+    {
+     "at": 39,
+     "x": -4.59,
+     "y": 4.27,
+     "move": 5
+    },
+    {
+     "at": 46,
+     "visible": false
+    }
+   ]
+  },
+  {
+   "id": "doll3",
+   "name": "D3",
+   "kind": "add",
+   "radius": 1.33,
+   "keys": [
+    {
+     "at": 0,
+     "visible": false,
+     "x": 3.73,
+     "y": -3.87
+    },
+    {
+     "at": 26,
+     "visible": true
+    },
+    {
+     "at": 39,
+     "x": 9.41,
+     "y": -9.39,
+     "move": 5
+    },
+    {
+     "at": 57,
+     "x": -1.79,
+     "y": -2.4,
+     "move": 5
+    },
+    {
+     "at": 60,
+     "visible": false
+    }
+   ]
+  },
+  {
+   "id": "doll4",
+   "name": "D4",
+   "kind": "add",
+   "radius": 1.33,
+   "keys": [
+    {
+     "at": 0,
+     "visible": false,
+     "x": -3.39,
+     "y": -6.4
+    },
+    {
+     "at": 26,
+     "visible": true
+    },
+    {
+     "at": 39,
+     "x": -11.73,
+     "y": -9.47,
+     "move": 5
+    },
+    {
+     "at": 57,
+     "x": -1.47,
+     "y": -2.19,
+     "move": 5
+    },
+    {
+     "at": 60,
+     "visible": false
+    }
+   ]
+  },
+  {
+   "id": "orb1",
+   "name": "Embolus",
+   "kind": "object",
+   "look": "orb",
+   "radius": 1.07,
+   "keys": [
+    {
+     "at": 0,
+     "visible": false,
+     "x": -15.6,
+     "y": -0.4
+    },
+    {
+     "at": 38,
+     "visible": true
+    },
+    {
+     "at": 50,
+     "x": -11.25,
+     "y": 8.72,
+     "move": 12
+    },
+    {
+     "at": 58,
+     "x": -5.2,
+     "y": 18.53,
+     "move": 8
+    },
+    {
+     "at": 64,
+     "visible": false
+    }
+   ]
+  },
+  {
+   "id": "orb2",
+   "name": "Embolus",
+   "kind": "object",
+   "look": "orb",
+   "radius": 1.07,
+   "keys": [
+    {
+     "at": 0,
+     "visible": false,
+     "x": 14.8,
+     "y": -0.45
+    },
+    {
+     "at": 38,
+     "visible": true
+    },
+    {
+     "at": 50,
+     "x": 7.2,
+     "y": 7.2,
+     "move": 12
+    },
+    {
+     "at": 58,
+     "x": -4.93,
+     "y": 14.13,
+     "move": 8
+    },
+    {
+     "at": 64,
+     "visible": false
+    }
+   ]
+  }
+ ],
+ "timeline": [
+  {
+   "at": 0,
+   "cast": 4,
+   "mechanic": {
+    "type": "raidwide",
+    "name": "Cascade"
+   }
+  },
+  {
+   "at": 16,
+   "cast": 4,
+   "minor": false,
+   "mechanic": {
+    "type": "protean",
+    "name": "Protean Wave (tornado)",
+    "from": {
+     "kind": "actor",
+     "id": "rage-w"
+    },
+    "count": 1,
+    "radius": 21.47,
+    "angleDeg": 17
+   }
+  },
+  {
+   "at": 16,
+   "cast": 4,
+   "minor": true,
+   "mechanic": {
+    "type": "protean",
+    "name": "Protean Wave (tornado)",
+    "from": {
+     "kind": "actor",
+     "id": "rage-e"
+    },
+    "count": 1,
+    "radius": 21.47,
+    "angleDeg": 17
+   }
+  },
+  {
+   "at": 16,
+   "cast": 4,
+   "minor": true,
+   "mechanic": {
+    "type": "protean",
+    "name": "Protean Wave (tornado)",
+    "from": {
+     "kind": "actor",
+     "id": "rage-s"
+    },
+    "count": 1,
+    "radius": 21.47,
+    "angleDeg": 17
+   }
+  },
+  {
+   "at": 17,
+   "cast": 3,
+   "minor": true,
+   "mechanic": {
+    "type": "cleave",
+    "name": "Fluid Strike",
+    "from": {
+     "kind": "actor",
+     "id": "hand"
+    },
+    "target": {
+     "kind": "slot",
+     "slot": "MT"
+    },
+    "radius": 9.33,
+    "angleDeg": 60
+   }
+  },
+  {
+   "at": 26,
+   "cast": 4,
+   "minor": true,
+   "mechanic": {
+    "type": "protean",
+    "name": "Protean Wave (tornado)",
+    "from": {
+     "kind": "actor",
+     "id": "rage-w"
+    },
+    "count": 1,
+    "radius": 21.47,
+    "angleDeg": 17
+   }
+  },
+  {
+   "at": 26,
+   "cast": 4,
+   "minor": true,
+   "mechanic": {
+    "type": "protean",
+    "name": "Protean Wave (tornado)",
+    "from": {
+     "kind": "actor",
+     "id": "rage-e"
+    },
+    "count": 1,
+    "radius": 21.47,
+    "angleDeg": 17
+   }
+  },
+  {
+   "at": 26,
+   "cast": 4,
+   "minor": true,
+   "mechanic": {
+    "type": "protean",
+    "name": "Protean Wave (tornado)",
+    "from": {
+     "kind": "actor",
+     "id": "rage-s"
+    },
+    "count": 1,
+    "radius": 21.47,
+    "angleDeg": 17
+   }
+  },
+  {
+   "at": 30,
+   "cast": 4,
+   "minor": false,
+   "mechanic": {
+    "type": "circle",
+    "name": "Exhaust",
+    "at": {
+     "kind": "actor",
+     "id": "doll1"
+    },
+    "radius": 4.0,
+    "follow": true,
+    "allowedHits": 1
+   }
+  },
+  {
+   "at": 30,
+   "cast": 4,
+   "minor": true,
+   "mechanic": {
+    "type": "circle",
+    "name": "Exhaust",
+    "at": {
+     "kind": "actor",
+     "id": "doll2"
+    },
+    "radius": 4.0,
+    "follow": true,
+    "allowedHits": 1
+   }
+  },
+  {
+   "at": 30,
+   "cast": 4,
+   "minor": true,
+   "mechanic": {
+    "type": "circle",
+    "name": "Exhaust",
+    "at": {
+     "kind": "actor",
+     "id": "doll3"
+    },
+    "radius": 4.0,
+    "follow": true,
+    "allowedHits": 1
+   }
+  },
+  {
+   "at": 30,
+   "cast": 4,
+   "minor": true,
+   "mechanic": {
+    "type": "circle",
+    "name": "Exhaust",
+    "at": {
+     "kind": "actor",
+     "id": "doll4"
+    },
+    "radius": 4.0,
+    "follow": true,
+    "allowedHits": 1
+   }
+  },
+  {
+   "at": 38,
+   "cast": 26,
+   "minor": true,
+   "mechanic": {
+    "type": "zone",
+    "name": "Embolus",
+    "at": {
+     "kind": "actor",
+     "id": "orb1"
+    },
+    "radius": 1.6
+   }
+  },
+  {
+   "at": 38,
+   "cast": 26,
+   "minor": true,
+   "mechanic": {
+    "type": "zone",
+    "name": "Embolus",
+    "at": {
+     "kind": "actor",
+     "id": "orb2"
+    },
+    "radius": 1.6
+   }
+  },
+  {
+   "at": 40,
+   "cast": 4,
+   "minor": true,
+   "mechanic": {
+    "type": "circle",
+    "name": "Exhaust",
+    "at": {
+     "kind": "actor",
+     "id": "doll1"
+    },
+    "radius": 4.0,
+    "follow": true,
+    "allowedHits": 1
+   }
+  },
+  {
+   "at": 40,
+   "cast": 4,
+   "minor": true,
+   "mechanic": {
+    "type": "circle",
+    "name": "Exhaust",
+    "at": {
+     "kind": "actor",
+     "id": "doll2"
+    },
+    "radius": 4.0,
+    "follow": true,
+    "allowedHits": 1
+   }
+  },
+  {
+   "at": 40,
+   "cast": 4,
+   "minor": true,
+   "mechanic": {
+    "type": "circle",
+    "name": "Exhaust",
+    "at": {
+     "kind": "actor",
+     "id": "doll3"
+    },
+    "radius": 4.0,
+    "follow": true,
+    "allowedHits": 1
+   }
+  },
+  {
+   "at": 40,
+   "cast": 4,
+   "minor": true,
+   "mechanic": {
+    "type": "circle",
+    "name": "Exhaust",
+    "at": {
+     "kind": "actor",
+     "id": "doll4"
+    },
+    "radius": 4.0,
+    "follow": true,
+    "allowedHits": 1
+   }
+  },
+  {
+   "at": 47,
+   "cast": 3,
+   "minor": false,
+   "mechanic": {
+    "type": "cleave",
+    "name": "Fluid Swing",
+    "from": {
+     "kind": "actor",
+     "id": "liquid"
+    },
+    "target": {
+     "kind": "slot",
+     "slot": "MT"
+    },
+    "radius": 9.33,
+    "angleDeg": 60
+   }
+  },
+  {
+   "at": 47,
+   "cast": 3,
+   "minor": true,
+   "mechanic": {
+    "type": "cleave",
+    "name": "Fluid Strike",
+    "from": {
+     "kind": "actor",
+     "id": "hand"
+    },
+    "target": {
+     "kind": "slot",
+     "slot": "OT"
+    },
+    "radius": 9.33,
+    "angleDeg": 60
+   }
+  },
+  {
+   "at": 63,
+   "cast": 4,
+   "minor": false,
+   "mechanic": {
+    "type": "cone",
+    "name": "Protean Wave",
+    "from": {
+     "kind": "actor",
+     "id": "liquid"
+    },
+    "radius": 23.2,
+    "angleDeg": 15,
+    "facingDeg": 0
+   }
+  },
+  {
+   "at": 63,
+   "cast": 4,
+   "minor": true,
+   "mechanic": {
+    "type": "cone",
+    "name": "Protean Wave",
+    "from": {
+     "kind": "actor",
+     "id": "liquid"
+    },
+    "radius": 23.2,
+    "angleDeg": 15,
+    "facingDeg": 180
+   }
+  },
+  {
+   "at": 64,
+   "cast": 3,
+   "minor": true,
+   "mechanic": {
+    "type": "protean",
+    "name": "Protean Wave (close)",
+    "from": {
+     "kind": "actor",
+     "id": "liquid"
+    },
+    "count": 4,
+    "radius": 23.2,
+    "angleDeg": 15
+   }
+  },
+  {
+   "at": 64,
+   "cast": 3,
+   "minor": true,
+   "mechanic": {
+    "type": "baited",
+    "name": "Sluice",
+    "from": {
+     "kind": "actor",
+     "id": "liquid"
+    },
+    "pick": "farthest",
+    "count": 4,
+    "radius": 3.31
+   }
+  },
+  {
+   "at": 67,
+   "cast": 3,
+   "minor": true,
+   "mechanic": {
+    "type": "protean",
+    "name": "Protean Wave (close)",
+    "from": {
+     "kind": "actor",
+     "id": "liquid"
+    },
+    "count": 4,
+    "radius": 23.2,
+    "angleDeg": 15
+   }
+  },
+  {
+   "at": 72,
+   "cast": 3,
+   "mechanic": {
+    "type": "raidwide",
+    "name": "Splash"
+   }
+  },
+  {
+   "at": 74,
+   "cast": 4,
+   "mechanic": {
+    "type": "spread",
+    "name": "Drainage",
+    "on": [
+     "MT",
+     "OT"
+    ],
+    "radius": 3.47
+   }
+  },
+  {
+   "at": 82,
+   "cast": 4,
+   "mechanic": {
+    "type": "raidwide",
+    "name": "Cascade"
+   }
+  },
+  {
+   "at": 90,
+   "cast": 3,
+   "mechanic": {
+    "type": "raidwide",
+    "name": "Throttle"
+   }
+  },
+  {
+   "at": 95,
+   "cast": 4,
+   "minor": false,
+   "mechanic": {
+    "type": "cone",
+    "name": "Protean Wave",
+    "from": {
+     "kind": "actor",
+     "id": "liquid"
+    },
+    "radius": 23.2,
+    "angleDeg": 15,
+    "facingDeg": 0
+   }
+  },
+  {
+   "at": 95,
+   "cast": 4,
+   "minor": true,
+   "mechanic": {
+    "type": "cone",
+    "name": "Protean Wave",
+    "from": {
+     "kind": "actor",
+     "id": "liquid"
+    },
+    "radius": 23.2,
+    "angleDeg": 15,
+    "facingDeg": 180
+   }
+  },
+  {
+   "at": 99,
+   "cast": 3,
+   "minor": true,
+   "mechanic": {
+    "type": "protean",
+    "name": "Protean Wave (close)",
+    "from": {
+     "kind": "actor",
+     "id": "liquid"
+    },
+    "count": 4,
+    "radius": 23.2,
+    "angleDeg": 15
+   }
+  },
+  {
+   "at": 99,
+   "cast": 3,
+   "minor": true,
+   "mechanic": {
+    "type": "baited",
+    "name": "Sluice",
+    "from": {
+     "kind": "actor",
+     "id": "liquid"
+    },
+    "pick": "farthest",
+    "count": 4,
+    "radius": 3.31
+   }
+  },
+  {
+   "at": 102,
+   "cast": 3,
+   "minor": true,
+   "mechanic": {
+    "type": "protean",
+    "name": "Protean Wave (close)",
+    "from": {
+     "kind": "actor",
+     "id": "liquid"
+    },
+    "count": 4,
+    "radius": 23.2,
+    "angleDeg": 15
+   }
+  },
+  {
+   "at": 108,
+   "cast": 4,
+   "minor": false,
+   "mechanic": {
+    "type": "protean",
+    "name": "Protean Wave (tornado)",
+    "from": {
+     "kind": "actor",
+     "id": "rage-w"
+    },
+    "count": 1,
+    "radius": 21.47,
+    "angleDeg": 17
+   }
+  },
+  {
+   "at": 108,
+   "cast": 4,
+   "minor": true,
+   "mechanic": {
+    "type": "protean",
+    "name": "Protean Wave (tornado)",
+    "from": {
+     "kind": "actor",
+     "id": "rage-e"
+    },
+    "count": 1,
+    "radius": 21.47,
+    "angleDeg": 17
+   }
+  },
+  {
+   "at": 108,
+   "cast": 4,
+   "minor": true,
+   "mechanic": {
+    "type": "protean",
+    "name": "Protean Wave (tornado)",
+    "from": {
+     "kind": "actor",
+     "id": "rage-s"
+    },
+    "count": 1,
+    "radius": 21.47,
+    "angleDeg": 17
+   }
+  },
+  {
+   "at": 118,
+   "cast": 4,
+   "mechanic": {
+    "type": "raidwide",
+    "name": "Hand of Parting"
+   }
+  }
+ ]
+}

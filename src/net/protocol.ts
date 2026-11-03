@@ -7,6 +7,9 @@ export type SnapPlayer = [id: string, x: number, y: number, fails: number, facin
 /** Ghost row in a snapshot: [humanId, x, y, destX, destY]. */
 export type SnapGhost = [id: string, x: number, y: number, dx: number, dy: number];
 
+/** Actor row in a snapshot: [actorId, x, y, facingDeg, visible 0/1]. */
+export type SnapActor = [id: string, x: number, y: number, facing: number, visible: number];
+
 /** Sent when the host jumps the encounter to another moment. */
 export interface SeekInfo {
   epoch: number;
@@ -40,7 +43,7 @@ export type HostMsg =
       hazards: Hazard[];
     }
   | { t: "full"; reason: string }
-  | { t: "snap"; tick: number; p: SnapPlayer[]; g: SnapGhost[]; b: number }
+  | { t: "snap"; tick: number; p: SnapPlayer[]; g: SnapGhost[]; a: SnapActor[] }
   | { t: "pause"; paused: boolean; tick: number }
   | ({ t: "seek" } & SeekInfo)
   | { t: "hazard"; h: Hazard }
@@ -56,7 +59,7 @@ export type ClientMsg =
   | { t: "pos"; tick: number; x: number; y: number; e: number; f: number }
   | { t: "ping"; c: number; rtt?: number };
 
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
 
 /** Round to 2 decimals to keep messages small. */
 export const r2 = (n: number) => Math.round(n * 100) / 100;

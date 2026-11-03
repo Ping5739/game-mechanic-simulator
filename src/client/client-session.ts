@@ -1,8 +1,10 @@
 import { ENCOUNTERS } from "../data";
+import { actorsOf } from "../sim/actors";
+import { compileStrategy, type CompiledStrategy } from "../sim/strategy";
 import type { BotSettings } from "../sim/bots";
 import { MOVE_SPEED, TICK_MS } from "../sim/constants";
 import { clampToArena, degFromDir, dist } from "../sim/math";
-import type { EncounterDef, Hazard, HitResult, Slot, Vec2 } from "../sim/types";
+import type { ActorDef, EncounterDef, Hazard, HitResult, Slot, Vec2 } from "../sim/types";
 import { PROTOCOL_VERSION, r2, type HostMsg, type RosterEntry } from "../net/protocol";
 import type { Link } from "../host/host-session";
 
@@ -42,6 +44,10 @@ export interface Placed extends Vec2 {
   facing: number;
 }
 
+export interface PlacedActor extends Placed {
+  visible: boolean;
+}
+
 export interface GhostView {
   pos: Vec2;
   dest: Vec2;
@@ -73,7 +79,9 @@ export class ClientSession {
   ready = false;
   myPos: Vec2 = { x: 0, y: 0 };
   myFacing = 0;
-  bossFacing = 0;
+  actorDefs: ActorDef[] = [];
+  strategy?: CompiledStrategy;
+  private actorBuf = new Map<string, { tick: number; x: number; y: number; f: number; v: boolean }[]>();
   rtt = 0;
   readonly players = new Map<string, Remote>();
   readonly hazards = new Map<number, TrackedHazard>();
@@ -178,7 +186,11 @@ export class ClientSession {
       case "welcome": {
         this.myId = m.you;
         this.slot = m.slot;
-        this.encounter = ENCOUNTERS[m.encounterId].def;
+        const enc = ENCOUNTERS[m.encounterId];
+        this.encounter = enc.def;
+        this.actorDefs = actorsOf(enc.def);
+        const stratDef = enc.strategies.find((x) => x.id === m.strategyId) ?? enc.strategies[0];
+        this.strategy = compileStrategy(stratDef);
         this.bots = m.bots;
         this.epoch = m.epoch;
         this.loopStartTick = m.loopStartTick;
@@ -204,7 +216,12 @@ export class ClientSession {
       case "snap": {
         if (!this.ready) return;
         this.syncClock(m.tick);
-        this.bossFacing = m.b;
+        for (const [id, x, y, f, vis] of m.a) {
+          let b = this.actorBuf.get(id);
+          if (!b) this.actorBuf.set(id, (b = []));
+          b.push({ tick: m.tick, x, y, f, v: vis === 1 });
+          if (b.length > 40) b.shift();
+        }
         for (const [id, x, y, fails, f] of m.p) {
           let r = this.players.get(id);
           if (!r) {
@@ -244,6 +261,7 @@ export class ClientSession {
         this.ghostBuf = [];
         this.myHistory = [];
         for (const r of this.players.values()) r.buf = [];
+        this.actorBuf.clear();
         const mine = m.positions[this.myId];
         if (mine) {
           this.myPos = { x: mine[0], y: mine[1] };
@@ -259,7 +277,14 @@ export class ClientSession {
       }
       case "result": {
         const h = this.hazards.get(m.r.hazardId);
-        if (h) h.result = m.r;
+        if (h) {
+          h.result = m.r;
+          // Untelegraphed mechanics reveal where they landed.
+          if (m.r.shapes) {
+            h.shapes = m.r.shapes;
+            h.hidden = false;
+          }
+        }
         const mine = m.r.failed.includes(this.myId);
         const item: FeedItem = m.r.reasons.length
           ? { ok: false, text: `${m.r.name}: ${m.r.reasons.join("; ")}`, mine, at: performance.now() }
@@ -337,9 +362,31 @@ export class ClientSession {
     for (const [id, h] of this.hazards) if (tick > h.resolveTick + 45) this.hazards.delete(id);
   }
 
-  /** Positions and facings to draw this frame. */
+  /** Bosses, adds and objects to draw this frame (interpolated like other players). */
+  renderActors(): Map<string, PlacedActor> {
+    const out = new Map<string, PlacedActor>();
+    const t = this.hostTick() - this.interpDelayTicks();
+    for (const [id, b] of this.actorBuf) {
+      if (!b.length) continue;
+      let a = b[0];
+      let c = b[b.length - 1];
+      for (let i = b.length - 1; i > 0; i--) {
+        if (t >= b[i - 1].tick) {
+          a = b[i - 1];
+          c = b[i];
+          break;
+        }
+      }
+      const f = c.tick === a.tick ? 1 : Math.max(0, Math.min(1, (t - a.tick) / (c.tick - a.tick)));
+      out.set(id, { x: a.x + (c.x - a.x) * f, y: a.y + (c.y - a.y) * f, facing: lerpDeg(a.f, c.f, f), visible: f < 0.5 ? a.v : c.v });
+    }
+    return out;
+  }
+
+  /** Positions and facings to draw this frame. Actors are included as "actor:<id>". */
   renderPositions(): Map<string, Placed> {
     const out = new Map<string, Placed>();
+    for (const [id, a] of this.renderActors()) out.set(`actor:${id}`, a);
     const t = this.hostTick() - this.interpDelayTicks();
     for (const r of this.players.values()) {
       if (r.id === this.myId) {
@@ -400,6 +447,7 @@ export class ClientSession {
     const t = this.hostTick();
     let best: Hazard | undefined;
     for (const h of this.hazards.values()) {
+      if (h.mechType === "zone") continue; // lingering hazards aren't casts
       if (t >= h.startTick && t < h.resolveTick && (!best || h.resolveTick < best.resolveTick)) best = h;
     }
     if (!best) return undefined;
