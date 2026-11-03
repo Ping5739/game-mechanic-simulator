@@ -1,3 +1,4 @@
+import { SLOTS, type Slot } from "../sim/types";
 import type { BotSettings } from "../sim/bots";
 import { PROTOCOL_VERSION, type ClientMsg, type HostMsg, type RosterEntry } from "../net/protocol";
 import type { Connection, HostRoom, Transport } from "../net/transport";
@@ -130,7 +131,8 @@ export class HostSession {
         if (conn) this.members.set(id, { name, rtt: 0, deliver: (m) => conn.send(m), conn });
         else this.members.get(LOCAL_ID)!.name = name;
         this.stats.peers = this.members.size - 1;
-        this.toWorker({ type: "join", id, name });
+        const slot = SLOTS.includes(msg.slot as Slot) ? msg.slot : undefined;
+        this.toWorker({ type: "join", id, name, slot });
         break;
       }
       case "pos":
@@ -169,7 +171,13 @@ export class HostSession {
       }
       case "full": {
         const member = this.members.get(m.id);
-        member?.deliver({ t: "full", reason: "The room is full (8/8 humans)." });
+        const reason =
+          m.taken.length >= SLOTS.length
+            ? "The room is full: all 8 roles are taken."
+            : m.requested
+              ? `${m.requested} is already taken in this room. Pick another role.`
+              : "The room is full.";
+        member?.deliver({ t: "full", reason, taken: m.taken });
         this.members.delete(m.id);
         setTimeout(() => member?.conn?.close(), 500);
         break;

@@ -9,7 +9,7 @@ import { DEFAULT_ENCOUNTER_ID, ENCOUNTERS } from "./data";
 import { HostSession, linkFromConnection, type Link } from "./host/host-session";
 import { netStats } from "./net/transport";
 import { DEFAULT_BOT_SETTINGS, type BotSettings } from "./sim/bots";
-import { SLOTS, roleOf, type Vec2 } from "./sim/types";
+import { SLOTS, roleOf, type Slot, type Vec2 } from "./sim/types";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -82,6 +82,35 @@ try {
 }
 if (params.get("room")) codeInput.value = params.get("room")!.toUpperCase();
 
+// Role picker ---------------------------------------------------------------
+const roleSelect = $<HTMLSelectElement>("role");
+try {
+  const saved = localStorage.getItem("gms-role");
+  if (saved !== null && [...roleSelect.options].some((o) => o.value === saved)) roleSelect.value = saved;
+} catch {
+  /* ignore */
+}
+const chosenRole = (): Slot | undefined => (roleSelect.value ? (roleSelect.value as Slot) : undefined);
+/** Roles marked as taken by the room we last tried to join. */
+const markTaken = (taken: Slot[]) => {
+  for (const o of roleSelect.querySelectorAll("option")) {
+    if (!o.value) continue;
+    const isTaken = taken.includes(o.value as Slot);
+    o.disabled = isTaken;
+    o.textContent = isTaken ? `${o.value} (taken)` : o.value;
+  }
+  if (roleSelect.selectedOptions[0]?.disabled) roleSelect.value = "";
+};
+roleSelect.addEventListener("change", () => {
+  try {
+    localStorage.setItem("gms-role", roleSelect.value);
+  } catch {
+    /* ignore */
+  }
+});
+// The taken list belongs to one room; a different code starts fresh.
+$<HTMLInputElement>("code").addEventListener("input", () => markTaken([]));
+
 function playerName(): string {
   const n = nameInput.value.trim() || "Player";
   try {
@@ -152,12 +181,14 @@ $("join-form").addEventListener("submit", async (e) => {
 // ----------------------------------------------------------------------------
 
 function startGame(link: Link, host: HostSession | null): void {
-  const client = new ClientSession(link, playerName(), host !== null);
+  const client = new ClientSession(link, playerName(), host !== null, chosenRole());
   (window as unknown as { gms: unknown }).gms = { client, host };
 
-  client.onFull = (reason) => {
+  client.onFull = (reason, taken) => {
+    markTaken(taken);
     setStatus(reason, true);
     busy(false);
+    if (taken.length) roleSelect.focus();
   };
   client.onReady = () => {
     $("lobby").hidden = true;

@@ -167,6 +167,18 @@ describe("simulation", () => {
     expect(sim.players.get("human")!.facing).toBe(270);
   });
 
+  it("each role can be held by only one player", () => {
+    const sim = new Simulation(enc.def, strat, 5, { difficulty: "perfect", mistakeChance: 0 });
+    expect(sim.addHuman("a", "A", "R1")).toBe("R1");
+    expect(sim.addHuman("b", "B", "R1")).toBeUndefined(); // taken: refused, not moved elsewhere
+    expect(sim.players.has("b")).toBe(false);
+    expect(sim.addHuman("b", "B", "H2")).toBe("H2");
+    expect(sim.addHuman("c", "C")).toBe("MT"); // no preference: first free role
+    expect(sim.humanSlots()).toEqual(["MT", "H2", "R1"]);
+    sim.removeHuman("a");
+    expect(sim.addHuman("d", "D", "R1")).toBe("R1"); // free again once its player leaves
+  });
+
   it("returns a slot to a bot when a human leaves", () => {
     const sim = new Simulation(enc.def, strat, 5, { difficulty: "perfect", mistakeChance: 0 });
     expect(sim.addHuman("a", "A")).toBe("MT");

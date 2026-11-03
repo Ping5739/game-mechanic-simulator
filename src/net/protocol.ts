@@ -42,7 +42,8 @@ export type HostMsg =
       bots: BotSettings;
       hazards: Hazard[];
     }
-  | { t: "full"; reason: string }
+  /** Join refused. `taken` lists the roles other players already hold. */
+  | { t: "full"; reason: string; taken?: Slot[] }
   | { t: "snap"; tick: number; p: SnapPlayer[]; g: SnapGhost[]; a: SnapActor[] }
   | { t: "pause"; paused: boolean; tick: number }
   | ({ t: "seek" } & SeekInfo)
@@ -55,11 +56,12 @@ export type HostMsg =
 // Client → host -------------------------------------------------------------
 
 export type ClientMsg =
-  | { t: "hello"; name: string; version: number }
+  /** `slot`: the role the player picked in the lobby; omitted means any free role. */
+  | { t: "hello"; name: string; version: number; slot?: Slot }
   | { t: "pos"; tick: number; x: number; y: number; e: number; f: number }
   | { t: "ping"; c: number; rtt?: number };
 
-export const PROTOCOL_VERSION = 4;
+export const PROTOCOL_VERSION = 5;
 
 /** Round to 2 decimals to keep messages small. */
 export const r2 = (n: number) => Math.round(n * 100) / 100;

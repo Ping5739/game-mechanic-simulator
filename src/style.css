@@ -117,6 +117,12 @@ select {
   text-transform: uppercase;
 }
 
+.name-role {
+  display: grid;
+  grid-template-columns: 1fr 9.5rem;
+  gap: 10px;
+}
+
 .choices {
   display: grid;
   grid-template-columns: 1fr 1fr;

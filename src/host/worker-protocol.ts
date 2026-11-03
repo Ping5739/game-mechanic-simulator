@@ -5,7 +5,7 @@ import type { RosterEntry, SeekInfo, SnapActor, SnapGhost, SnapPlayer } from "..
 /** Messages from the host page to the simulation worker. */
 export type ToWorker =
   | { type: "init"; encounterId: string; strategyId: string; seed: number; bots: BotSettings }
-  | { type: "join"; id: string; name: string }
+  | { type: "join"; id: string; name: string; slot?: Slot }
   | { type: "leave"; id: string }
   | { type: "sample"; id: string; tick: number; x: number; y: number; epoch: number; facing: number }
   | { type: "seek"; seconds: number }
@@ -17,7 +17,7 @@ export type FromWorker =
   | { type: "joined"; id: string; slot: Slot; tick: number; epoch: number; loopStartTick: number; paused: boolean; hazards: Hazard[] }
   | { type: "pause"; paused: boolean; tick: number }
   | ({ type: "seek" } & SeekInfo)
-  | { type: "full"; id: string }
+  | { type: "full"; id: string; requested?: Slot; taken: Slot[] }
   | { type: "snap"; tick: number; p: SnapPlayer[]; g: SnapGhost[]; a: SnapActor[] }
   | { type: "hazard"; h: Hazard }
   | { type: "result"; r: HitResult }

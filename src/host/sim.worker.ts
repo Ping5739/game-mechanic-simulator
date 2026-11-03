@@ -87,8 +87,8 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
     }
     case "join": {
       if (!sim) return;
-      const slot = sim.addHuman(m.id, m.name);
-      if (!slot) post({ type: "full", id: m.id });
+      const slot = sim.addHuman(m.id, m.name, m.slot);
+      if (!slot) post({ type: "full", id: m.id, requested: m.slot, taken: sim.humanSlots() });
       else
         post({
           type: "joined",

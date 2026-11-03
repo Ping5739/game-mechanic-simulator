@@ -22,10 +22,32 @@
         </label>
         <p id="encounter-source" class="fine source"></p>
 
-        <label class="field">
-          <span>Your name</span>
-          <input id="name" maxlength="24" autocomplete="nickname" placeholder="e.g. Ping" />
-        </label>
+        <div class="name-role">
+          <label class="field">
+            <span>Your name</span>
+            <input id="name" maxlength="24" autocomplete="nickname" placeholder="e.g. Ping" />
+          </label>
+          <label class="field">
+            <span>Play as</span>
+            <select id="role">
+              <option value="">Any free role</option>
+              <optgroup label="Tanks">
+                <option value="MT">MT</option>
+                <option value="OT">OT</option>
+              </optgroup>
+              <optgroup label="Healers">
+                <option value="H1">H1</option>
+                <option value="H2">H2</option>
+              </optgroup>
+              <optgroup label="DPS">
+                <option value="M1">M1</option>
+                <option value="M2">M2</option>
+                <option value="R1">R1</option>
+                <option value="R2">R2</option>
+              </optgroup>
+            </select>
+          </label>
+        </div>
 
         <div class="choices">
           <button id="solo" class="btn">Practice solo</button>

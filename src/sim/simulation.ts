@@ -112,12 +112,16 @@ export class Simulation {
     this.rosterChanged = true;
   }
 
-  /** A human takes over a slot (the first free bot slot if none is given). */
+  /**
+   * A human takes over a slot: the requested one, or the first free one if
+   * none is requested. Returns undefined if the requested slot is held by
+   * another human (each role belongs to one player) or the party is full.
+   */
   addHuman(id: string, name: string, preferred?: Slot): Slot | undefined {
     const existing = this.players.get(id);
     if (existing) return existing.slot;
     const freeSlots = SLOTS.filter((s) => this.players.has(`bot:${s}`));
-    const slot = preferred && freeSlots.includes(preferred) ? preferred : freeSlots[0];
+    const slot = preferred ? (freeSlots.includes(preferred) ? preferred : undefined) : freeSlots[0];
     if (!slot) return undefined;
     const bot = this.players.get(`bot:${slot}`)!;
     this.players.delete(bot.id);
@@ -150,6 +154,11 @@ export class Simulation {
   setBotSettings(settings: BotSettings): void {
     this.botSettings = settings;
     for (const b of this.bots.values()) b.settings = settings;
+  }
+
+  /** Slots currently held by humans. */
+  humanSlots(): Slot[] {
+    return SLOTS.filter((s) => !this.players.has(`bot:${s}`));
   }
 
   /** Who fills a slot right now (bot or human). */

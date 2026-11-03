@@ -70,6 +70,8 @@ test("the ghost leads you to the right spot and can be hidden", async ({ page })
 test("a host's timeline jump moves everyone; guests can't jump", async ({ browser }) => {
   const hostCtx = await browser.newContext();
   const joinCtx = await browser.newContext();
+  // Networking test: 2D keeps it fast in software-rendered test browsers.
+  for (const ctx of [hostCtx, joinCtx]) await ctx.addInitScript(() => localStorage.setItem("gms-view", "2d"));
   const host = await hostCtx.newPage();
   const joiner = await joinCtx.newPage();
 

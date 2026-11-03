@@ -97,7 +97,7 @@ export class ClientSession {
   private ghostFacing = 0;
 
   onReady: () => void = () => {};
-  onFull: (reason: string) => void = () => {};
+  onFull: (reason: string, taken: Slot[]) => void = () => {};
   onDisconnect: () => void = () => {};
   onRoster: () => void = () => {};
   onFeed: (item: FeedItem) => void = () => {};
@@ -116,13 +116,14 @@ export class ClientSession {
     private readonly link: Link,
     name: string,
     readonly isHost: boolean,
+    requestedSlot?: Slot,
   ) {
     link.onMessage((m) => this.onMsg(m));
     link.onClose(() => {
       clearInterval(this.pingTimer);
       this.onDisconnect();
     });
-    link.send({ t: "hello", name, version: PROTOCOL_VERSION });
+    link.send({ t: "hello", name, version: PROTOCOL_VERSION, slot: requestedSlot });
     const ping = () => link.send({ t: "ping", c: performance.now(), rtt: Math.round(this.rtt) });
     this.pingTimer = setInterval(ping, 1000);
     ping();
@@ -202,7 +203,7 @@ export class ClientSession {
         break;
       }
       case "full":
-        this.onFull(m.reason);
+        this.onFull(m.reason, m.taken ?? []);
         break;
       case "pong": {
         const sample = performance.now() - m.c;

@@ -11,6 +11,10 @@ random puddles.
 
 ## Playing
 
+- **Play as** – pick your role (MT, OT, H1, H2, M1, M2, R1, R2) before
+  starting or joining, or leave it on "Any free role". Each role belongs to
+  one player: if someone already has the role you picked, joining tells you
+  and greys it out so you can choose another.
 - **Practice solo** – you plus 7 bots, no network needed.
 - **Create a room** – you get a 5-letter code. Click it to copy an invite link.
 - **Join room** – enter a friend's code (or open their invite link).
